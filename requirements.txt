@@ -1,0 +1,4 @@
+# Python 3.11 or newer is required because pandas 3.0.6 does not install on 3.10.
+streamlit==1.64.0
+pandas==3.0.6
+openpyxl==3.1.5
