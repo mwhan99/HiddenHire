@@ -1,10 +1,34 @@
+import re
+import sys
+from datetime import date
+
 import pandas as pd
 import requests
-from datetime import date
+
+FILE_PATH = "HiddenHire_Data.xlsx"
+EXCEL_CELL_LIMIT = 32767
+ILLEGAL_EXCEL_CHARS = re.compile("[\000-\010]|[\013-\014]|[\016-\037]")
+
+
+def excel_description(value):
+    """Return a Job_Description that Excel can store."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+
+    text = ILLEGAL_EXCEL_CHARS.sub("", str(value))
+    return text[:EXCEL_CELL_LIMIT]
+
+
+def fail_without_saving(messages):
+    for message in messages:
+        print(message, file=sys.stderr)
+    print("Job_Snapshots was not changed.", file=sys.stderr)
+    sys.exit(1)
+
 
 # 1. Read Companies sheet
 companies = pd.read_excel(
-    "HiddenHire_Data.xlsx",
+    FILE_PATH,
     sheet_name="Companies"
 )
 
@@ -14,6 +38,7 @@ lever_companies = companies[
 ]
 
 snapshot_rows = []
+fetch_errors = []
 
 # 3. Collect jobs from every Lever company
 for _, company in lever_companies.iterrows():
@@ -22,10 +47,11 @@ for _, company in lever_companies.iterrows():
     company_name = company["Company_Name"]
     identifier = company["ATS_Identifier"]
 
-    if pd.isna(identifier):
+    if pd.isna(identifier) or not str(identifier).strip():
         print(f"Skipping {company_name}: no ATS identifier")
         continue
 
+    identifier = str(identifier).strip()
     url = f"https://api.lever.co/v0/postings/{identifier}?mode=json"
 
     try:
@@ -33,11 +59,13 @@ for _, company in lever_companies.iterrows():
         response.raise_for_status()
 
         jobs = response.json()
+        if not isinstance(jobs, list):
+            raise ValueError("Lever response did not contain a job list")
 
         print(f"{company_name}: {len(jobs)} jobs")
 
         for job in jobs:
-            categories = job.get("categories", {})
+            categories = job.get("categories") or {}
 
             snapshot_rows.append({
                 "Snapshot_Date": date.today(),
@@ -54,12 +82,17 @@ for _, company in lever_companies.iterrows():
                     errors="coerce"
                 ),
                 "Job_URL": job.get("hostedUrl"),
-                "Job_Description": job.get("descriptionPlain"),
+                "Job_Description": excel_description(
+                    job.get("descriptionPlain")
+                ),
                 "ATS": "Lever"
             })
 
     except Exception as e:
-        print(f"ERROR - {company_name}: {e}")
+        fetch_errors.append(f"ERROR - {company_name}: {e}")
+
+if fetch_errors:
+    fail_without_saving(fetch_errors)
 
 # 4. Combine all Lever jobs
 snapshot_df = pd.DataFrame(snapshot_rows)
@@ -71,11 +104,11 @@ print("Total Lever jobs collected:", len(snapshot_df))
 # while preserving other ATS and historical snapshots
 
 existing_snapshots = pd.read_excel(
-    "HiddenHire_Data.xlsx",
+    FILE_PATH,
     sheet_name="Job_Snapshots"
 )
 
-today = pd.Timestamp(date.today())
+today = pd.Timestamp(date.today()).normalize()
 
 existing_snapshots["Snapshot_Date"] = pd.to_datetime(
     existing_snapshots["Snapshot_Date"]
@@ -84,7 +117,7 @@ existing_snapshots["Snapshot_Date"] = pd.to_datetime(
 # Remove only today's old Lever snapshot
 existing_snapshots = existing_snapshots[
     ~(
-        (existing_snapshots["Snapshot_Date"] == today)
+        (existing_snapshots["Snapshot_Date"].dt.normalize() == today)
         & (existing_snapshots["ATS"] == "Lever")
     )
 ]
@@ -96,7 +129,7 @@ all_snapshots = pd.concat(
 )
 
 with pd.ExcelWriter(
-    "HiddenHire_Data.xlsx",
+    FILE_PATH,
     engine="openpyxl",
     mode="a",
     if_sheet_exists="replace"
