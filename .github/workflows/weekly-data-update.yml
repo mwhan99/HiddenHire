@@ -1,0 +1,146 @@
+# GitHub schedules use UTC. The two Monday crons are 8:00 AM
+# America/New_York during daylight time and standard time.
+# The gate keeps only the cron that matches the current New York offset.
+# workflow_dispatch always runs.
+
+name: Weekly data update
+
+on:
+  schedule:
+    - cron: "0 12 * * 1"
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  schedule-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+    steps:
+      - name: Keep the 8:00 AM New York run
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          offset=$(TZ=America/New_York date +%z)
+          schedule="${{ github.event.schedule }}"
+
+          if [ "$offset" = "-0400" ] && [ "$schedule" = "0 12 * * 1" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Daylight time: running the 12:00 UTC schedule."
+          elif [ "$offset" = "-0500" ] && [ "$schedule" = "0 13 * * 1" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Standard time: running the 13:00 UTC schedule."
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping. New York offset is $offset and schedule is $schedule."
+          fi
+
+  update-data:
+    needs: schedule-gate
+    if: needs.schedule-gate.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: hiddenhire-weekly-data-update
+      cancel-in-progress: false
+    env:
+      TZ: America/New_York
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Record the Companies sheet
+        run: |
+          python - <<'PY'
+          import pandas as pd
+
+          companies = pd.read_excel(
+              "HiddenHire_Data.xlsx",
+              sheet_name="Companies",
+          )
+          companies.to_pickle("/tmp/companies_before.pkl")
+          print(f"Recorded {len(companies)} companies.")
+          PY
+
+      - name: Collect Ashby jobs
+        run: python ashby_collector.py
+
+      - name: Collect Greenhouse jobs
+        run: python greenhouse_collector.py
+
+      - name: Collect Lever jobs
+        run: python lever_collector.py
+
+      - name: Recalculate hiring baseline
+        run: python hiring_momentum.py
+
+      - name: Validate the workbook
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          from datetime import date
+
+          import pandas as pd
+
+          path = "HiddenHire_Data.xlsx"
+          if not os.path.exists(path):
+              sys.exit("HiddenHire_Data.xlsx is missing.")
+
+          before = pd.read_pickle("/tmp/companies_before.pkl")
+          after = pd.read_excel(path, sheet_name="Companies")
+          if not before.equals(after):
+              sys.exit("Companies sheet was modified.")
+
+          jobs = pd.read_excel(path, sheet_name="Job_Snapshots")
+          jobs["Snapshot_Date"] = pd.to_datetime(jobs["Snapshot_Date"]).dt.normalize()
+          today = pd.Timestamp(date.today()).normalize()
+          today_rows = jobs[jobs["Snapshot_Date"] == today]
+          if today_rows.empty:
+              sys.exit(f"No Job_Snapshots rows for {today.date()}.")
+
+          duplicate_count = int(
+              jobs.duplicated(
+                  ["Snapshot_Date", "ATS", "Company_ID", "Job_ID"]
+              ).sum()
+          )
+          if duplicate_count:
+              sys.exit(f"Found {duplicate_count} duplicate snapshot keys.")
+
+          print(f"Validation passed for {today.date()}.")
+          print(f"Today's rows: {len(today_rows)}")
+          print("Companies sheet is unchanged.")
+          PY
+
+      - name: Commit the workbook
+        run: |
+          git add -- HiddenHire_Data.xlsx
+          if git diff --cached --quiet; then
+            echo "HiddenHire_Data.xlsx did not change. Nothing to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Weekly HiddenHire data update $(date +%F)"
+          git push origin HEAD:main
