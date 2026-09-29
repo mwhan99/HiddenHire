@@ -2,6 +2,7 @@ import html
 
 import streamlit as st
 
+import candidate_fit
 from pipeline import rank_hidden_opportunities
 
 st.set_page_config(
@@ -154,6 +155,19 @@ st.markdown(
             color: #5c6d7a;
             margin: 0;
         }
+        .why-label {
+            color: #5c6d7a;
+            font-size: 0.75rem;
+            font-weight: 650;
+            letter-spacing: 0.04em;
+            margin: 0.95rem 0 0.28rem 0;
+        }
+        .why-copy {
+            color: #243847;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0;
+        }
         .score-row {
             display: flex;
             gap: 0.55rem;
@@ -237,6 +251,134 @@ def show_text(value):
     return text if text else "—"
 
 
+FAMILY_LABELS = {
+    "business_analytics": "business analytics",
+    "strategy": "strategy",
+    "operations": "operations",
+    "finance": "finance",
+    "marketing_growth": "marketing and growth",
+    "product": "product",
+    "software_engineering": "software engineering",
+    "data_science_ml": "data and machine learning",
+}
+
+
+def join_phrases(items):
+    items = [item for item in items if item]
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:
+        return f"{items[0]} and {items[1]}"
+    return ", ".join(items[:-1]) + ", and " + items[-1]
+
+
+def matched_family_labels(job_title, target_roles):
+    title = "" if job_title is None else str(job_title).lower()
+    if any(exclusion in title for exclusion in candidate_fit.ROLE_EXCLUSIONS):
+        return []
+
+    labels = []
+    families = candidate_fit.find_role_families(
+        [role.lower() for role in target_roles]
+    )
+    for family in families:
+        phrases = candidate_fit.ROLE_FAMILIES[family]
+        if any(phrase in title for phrase in phrases):
+            labels.append(FAMILY_LABELS[family])
+    return labels
+
+
+def explain_opportunity(row, profile):
+    """Describe signals the current scores already support."""
+    title = "" if row.Job_Title is None else str(row.Job_Title)
+    industry_text = "" if row.Industry is None else str(row.Industry)
+    target_roles = profile.get("target_roles", [])
+    preferred_industries = profile.get("industries", [])
+    preferred_location = profile.get("location", "")
+
+    exact_roles = [
+        role for role in target_roles
+        if role and role.lower() in title.lower()
+    ]
+    if exact_roles:
+        noun = "role" if len(exact_roles) == 1 else "roles"
+        role_phrase = f"your target {join_phrases(exact_roles)} {noun}"
+    else:
+        family_labels = matched_family_labels(title, target_roles)
+        if family_labels:
+            role_phrase = f"your target {join_phrases(family_labels)} roles"
+        elif row.Family_Match and row.Family_Match > 0:
+            role_phrase = "your target roles"
+        else:
+            role_phrase = ""
+
+    industry_hits = [
+        industry for industry in preferred_industries
+        if industry and industry.lower() in industry_text.lower()
+    ]
+    if row.Industry_Match and row.Industry_Match > 0 and industry_hits:
+        noun = "industry" if len(industry_hits) == 1 else "industries"
+        industry_phrase = f"your preferred {join_phrases(industry_hits)} {noun}"
+    else:
+        industry_phrase = ""
+
+    if row.Skill_Match and row.Skill_Match >= 100:
+        skill_phrase = "your listed skills in the posting"
+    elif row.Skill_Match and row.Skill_Match > 0:
+        skill_phrase = "some of your listed skills in the posting"
+    else:
+        skill_phrase = ""
+
+    if row.Location_Match and row.Location_Match >= 100 and preferred_location:
+        location_phrase = f"a location that fits your {preferred_location} preference"
+    elif row.Location_Match and row.Location_Match >= 75:
+        location_phrase = "a remote posting that may still fit your location preference"
+    else:
+        location_phrase = ""
+
+    fit_points = [phrase for phrase in [role_phrase, industry_phrase] if phrase]
+    extra_points = [phrase for phrase in [skill_phrase, location_phrase] if phrase]
+    # Keep the card to the strongest supported signals.
+    if len(fit_points) >= 2 and len(extra_points) > 1:
+        extra_points = extra_points[:1]
+
+    if len(fit_points) >= 2:
+        fit_sentence = "Strong match for " + join_phrases(fit_points)
+    elif fit_points:
+        fit_sentence = "This role lines up with " + fit_points[0]
+    else:
+        fit_sentence = "This opening matches part of your search"
+
+    if extra_points:
+        fit_sentence += ", with " + join_phrases(extra_points)
+    fit_sentence += "."
+
+    momentum = row.Hiring_Momentum_Score
+    if momentum is None or momentum != momentum:
+        momentum_sentence = (
+            "Hiring activity for this company is not available in the current data."
+        )
+    elif momentum >= 60:
+        momentum_sentence = (
+            "The company's current hiring activity makes this "
+            "an opportunity worth exploring now."
+        )
+    elif momentum >= 45:
+        momentum_sentence = (
+            "Hiring activity looks steady compared with "
+            "the other companies in this search."
+        )
+    else:
+        momentum_sentence = (
+            "Hiring activity is quieter than "
+            "the other companies in this search."
+        )
+
+    return f"{fit_sentence} {momentum_sentence}"
+
+
 st.markdown("# HiddenHire")
 st.markdown(
     '<p class="tagline">Discover emerging companies hiring for you.</p>',
@@ -304,11 +446,17 @@ with st.form("profile"):
 
 if submitted:
     with st.spinner("Finding hidden opportunities..."):
+        profile = {
+            "target_roles": split_csv(target_roles_text),
+            "skills": split_csv(skills_text),
+            "industries": split_csv(industries_text),
+            "location": location.strip(),
+        }
         results = rank_hidden_opportunities(
-            split_csv(target_roles_text),
-            split_csv(skills_text),
-            split_csv(industries_text),
-            location.strip(),
+            profile["target_roles"],
+            profile["skills"],
+            profile["industries"],
+            profile["location"],
         )
         results = results.sort_values(
             [
@@ -320,6 +468,7 @@ if submitted:
             ascending=[False, False, True, True],
         )
         st.session_state["results"] = results.reset_index(drop=True)
+        st.session_state["search_profile"] = profile
 
 results = st.session_state.get("results")
 
@@ -378,3 +527,12 @@ else:
                     """,
                     unsafe_allow_html=True,
                 )
+            explanation = explain_opportunity(
+                row,
+                st.session_state.get("search_profile", {}),
+            )
+            st.markdown(
+                '<p class="why-label">Why this opportunity?</p>'
+                f'<p class="why-copy">{html.escape(explanation)}</p>',
+                unsafe_allow_html=True,
+            )

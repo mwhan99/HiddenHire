@@ -16,6 +16,14 @@ OUTPUT_COLUMNS = [
     "Job_URL",
 ]
 
+# Already calculated by candidate fit. Passed through for explanations only.
+SIGNAL_COLUMNS = [
+    "Family_Match",
+    "Skill_Match",
+    "Industry_Match",
+    "Location_Match",
+]
+
 
 def rank_hidden_opportunities(
     target_roles,
@@ -84,4 +92,4 @@ def rank_hidden_opportunities(
         ascending=[False, False, True, True],
     )
 
-    return ranked[OUTPUT_COLUMNS].reset_index(drop=True)
+    return ranked[OUTPUT_COLUMNS + SIGNAL_COLUMNS].reset_index(drop=True)
