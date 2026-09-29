@@ -1,5 +1,6 @@
 import html
 
+import pandas as pd
 import streamlit as st
 
 import candidate_fit
@@ -290,10 +291,58 @@ def matched_family_labels(job_title, target_roles):
     return labels
 
 
+def row_value(row, name):
+    """Read one result field from a Series or an itertuples row.
+
+    Streamlit Cloud can hand back a row whose match-score attributes
+    are missing even when the original column exists. A missing or
+    null value means that signal is not available.
+    """
+    value = None
+    getter = getattr(row, "get", None)
+    if callable(getter):
+        try:
+            value = getter(name, None)
+        except TypeError:
+            value = None
+    if value is None and hasattr(row, "_asdict"):
+        value = row._asdict().get(name)
+    if value is None:
+        value = getattr(row, name, None)
+    try:
+        if value is None or pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        return None
+    return value
+
+
+def signal_above(row, name, threshold):
+    value = row_value(row, name)
+    if value is None:
+        return False
+    try:
+        return float(value) > threshold
+    except (TypeError, ValueError):
+        return False
+
+
+def signal_at_least(row, name, threshold):
+    value = row_value(row, name)
+    if value is None:
+        return False
+    try:
+        return float(value) >= threshold
+    except (TypeError, ValueError):
+        return False
+
+
 def explain_opportunity(row, profile):
     """Describe signals the current scores already support."""
-    title = "" if row.Job_Title is None else str(row.Job_Title)
-    industry_text = "" if row.Industry is None else str(row.Industry)
+    title_value = row_value(row, "Job_Title")
+    industry_value = row_value(row, "Industry")
+    title = "" if title_value is None else str(title_value)
+    industry_text = "" if industry_value is None else str(industry_value)
     target_roles = profile.get("target_roles", [])
     preferred_industries = profile.get("industries", [])
     preferred_location = profile.get("location", "")
@@ -309,7 +358,7 @@ def explain_opportunity(row, profile):
         family_labels = matched_family_labels(title, target_roles)
         if family_labels:
             role_phrase = f"your target {join_phrases(family_labels)} roles"
-        elif row.Family_Match and row.Family_Match > 0:
+        elif signal_above(row, "Family_Match", 0):
             role_phrase = "your target roles"
         else:
             role_phrase = ""
@@ -318,22 +367,22 @@ def explain_opportunity(row, profile):
         industry for industry in preferred_industries
         if industry and industry.lower() in industry_text.lower()
     ]
-    if row.Industry_Match and row.Industry_Match > 0 and industry_hits:
+    if signal_above(row, "Industry_Match", 0) and industry_hits:
         noun = "industry" if len(industry_hits) == 1 else "industries"
         industry_phrase = f"your preferred {join_phrases(industry_hits)} {noun}"
     else:
         industry_phrase = ""
 
-    if row.Skill_Match and row.Skill_Match >= 100:
+    if signal_at_least(row, "Skill_Match", 100):
         skill_phrase = "your listed skills in the posting"
-    elif row.Skill_Match and row.Skill_Match > 0:
+    elif signal_above(row, "Skill_Match", 0):
         skill_phrase = "some of your listed skills in the posting"
     else:
         skill_phrase = ""
 
-    if row.Location_Match and row.Location_Match >= 100 and preferred_location:
+    if signal_at_least(row, "Location_Match", 100) and preferred_location:
         location_phrase = f"a location that fits your {preferred_location} preference"
-    elif row.Location_Match and row.Location_Match >= 75:
+    elif signal_at_least(row, "Location_Match", 75):
         location_phrase = "a remote posting that may still fit your location preference"
     else:
         location_phrase = ""
@@ -355,8 +404,8 @@ def explain_opportunity(row, profile):
         fit_sentence += ", with " + join_phrases(extra_points)
     fit_sentence += "."
 
-    momentum = row.Hiring_Momentum_Score
-    if momentum is None or momentum != momentum:
+    momentum = row_value(row, "Hiring_Momentum_Score")
+    if momentum is None:
         momentum_sentence = (
             "Hiring activity for this company is not available in the current data."
         )
@@ -482,7 +531,7 @@ else:
     st.markdown('<p class="section-label">Results</p>', unsafe_allow_html=True)
     st.subheader(f"{count} matched {label}")
 
-    for row in results.itertuples(index=False):
+    for position, row in enumerate(results.itertuples(index=False)):
         with st.container(border=True):
             info, score = st.columns([4.4, 1.35], vertical_alignment="center")
             with info:
@@ -528,7 +577,7 @@ else:
                     unsafe_allow_html=True,
                 )
             explanation = explain_opportunity(
-                row,
+                results.iloc[position],
                 st.session_state.get("search_profile", {}),
             )
             st.markdown(
