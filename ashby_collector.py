@@ -47,15 +47,25 @@ def fail_without_saving(messages):
     sys.exit(1)
 
 
+def is_active(value):
+    """Blank counts as active. False, 0, "no", or "inactive" does not."""
+    if value is None or pd.isna(value):
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() not in {"false", "no", "n", "0", "inactive"}
+    return bool(value)
+
+
 # 1. Read Companies sheet
 companies = pd.read_excel(
     FILE_PATH,
     sheet_name="Companies"
 )
 
-# 2. Keep only Ashby companies
+# 2. Keep only active Ashby companies
 ashby_companies = companies[
-    companies["ATS"] == "Ashby"
+    (companies["ATS"] == "Ashby")
+    & companies["Active"].apply(is_active)
 ]
 
 snapshot_rows = []
@@ -65,7 +75,7 @@ fetch_errors = []
 for _, company in ashby_companies.iterrows():
 
     company_id = company["Company_ID"]
-    company_name = company["Company_Name"]
+    company_name = str(company["Company_Name"]).strip()
     identifier = resolved_identifier(company)
 
     # Skip companies without an identifier

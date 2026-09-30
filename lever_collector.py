@@ -1,3 +1,4 @@
+import html
 import re
 import sys
 from datetime import date
@@ -19,11 +20,55 @@ def excel_description(value):
     return text[:EXCEL_CELL_LIMIT]
 
 
+HTML_TAG = re.compile(r"<[^>]+>")
+BLOCK_TAG = re.compile(r"</?(p|div|br|li|ul|ol|h[1-6])[^>]*>", re.IGNORECASE)
+
+
+def html_to_text(content):
+    """Turn a Lever HTML fragment (<li>...</li>) into plain text."""
+    if not content:
+        return ""
+    text = BLOCK_TAG.sub(" ", str(content))
+    text = HTML_TAG.sub("", text)
+    text = html.unescape(text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def full_description(job):
+    """Combine every text section of a Lever posting.
+
+    descriptionPlain is only the opening section. The responsibilities
+    and requirements bullets are in "lists", and closing notes are in
+    additionalPlain, so all three are joined for skill matching.
+    """
+    parts = [job.get("descriptionPlain") or ""]
+
+    for section in job.get("lists") or []:
+        heading = (section.get("text") or "").strip()
+        bullets = html_to_text(section.get("content"))
+        if heading or bullets:
+            parts.append(f"{heading}: {bullets}" if heading else bullets)
+
+    parts.append(job.get("additionalPlain") or "")
+
+    text = "\n".join(part.strip() for part in parts if part and part.strip())
+    return text or None
+
+
 def fail_without_saving(messages):
     for message in messages:
         print(message, file=sys.stderr)
     print("Job_Snapshots was not changed.", file=sys.stderr)
     sys.exit(1)
+
+
+def is_active(value):
+    """Blank counts as active. False, 0, "no", or "inactive" does not."""
+    if value is None or pd.isna(value):
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() not in {"false", "no", "n", "0", "inactive"}
+    return bool(value)
 
 
 # 1. Read Companies sheet
@@ -32,9 +77,10 @@ companies = pd.read_excel(
     sheet_name="Companies"
 )
 
-# 2. Keep only Lever companies
+# 2. Keep only active Lever companies
 lever_companies = companies[
-    companies["ATS"] == "Lever"
+    (companies["ATS"] == "Lever")
+    & companies["Active"].apply(is_active)
 ]
 
 snapshot_rows = []
@@ -44,7 +90,7 @@ fetch_errors = []
 for _, company in lever_companies.iterrows():
 
     company_id = company["Company_ID"]
-    company_name = company["Company_Name"]
+    company_name = str(company["Company_Name"]).strip()
     identifier = company["ATS_Identifier"]
 
     if pd.isna(identifier) or not str(identifier).strip():
@@ -83,7 +129,7 @@ for _, company in lever_companies.iterrows():
                 ),
                 "Job_URL": job.get("hostedUrl"),
                 "Job_Description": excel_description(
-                    job.get("descriptionPlain")
+                    full_description(job)
                 ),
                 "ATS": "Lever"
             })
