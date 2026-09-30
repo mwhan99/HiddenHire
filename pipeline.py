@@ -25,6 +25,15 @@ SIGNAL_COLUMNS = [
 ]
 
 
+def is_active(value):
+    """Blank counts as active. False, 0, "no", or "inactive" does not."""
+    if value is None or pd.isna(value):
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() not in {"false", "no", "n", "0", "inactive"}
+    return bool(value)
+
+
 def rank_hidden_opportunities(
     target_roles,
     skills,
@@ -49,15 +58,24 @@ def rank_hidden_opportunities(
         "experience_level": experience_level,
     }
 
+    companies = pd.read_excel(file_path, sheet_name="Companies")
+
     jobs = pd.read_excel(file_path, sheet_name="Job_Snapshots")
     jobs["Snapshot_Date"] = pd.to_datetime(jobs["Snapshot_Date"])
+
+    # Leave out companies marked inactive. Otherwise a company that stops
+    # being collected looks like it closed every job, and that drop would
+    # set the scale for everyone else's momentum.
+    active_ids = set(
+        companies.loc[companies["Active"].apply(is_active), "Company_ID"]
+        .astype(str)
+    )
+    jobs = jobs[jobs["Company_ID"].astype(str).isin(active_ids)].copy()
 
     latest_date = jobs["Snapshot_Date"].max()
     latest_jobs = jobs[
         jobs["Snapshot_Date"] == latest_date
     ].copy()
-
-    companies = pd.read_excel(file_path, sheet_name="Companies")
 
     fit = candidate_fit.score_candidate_fit(
         latest_jobs,
