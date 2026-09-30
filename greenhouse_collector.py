@@ -1,3 +1,4 @@
+import html
 import re
 import sys
 from datetime import date
@@ -22,6 +23,28 @@ def excel_description(value):
 
     text = ILLEGAL_EXCEL_CHARS.sub("", str(value))
     return text[:EXCEL_CELL_LIMIT]
+
+
+HTML_TAG = re.compile(r"<[^>]+>")
+BLOCK_TAG = re.compile(r"</?(p|div|br|li|ul|ol|h[1-6])[^>]*>", re.IGNORECASE)
+
+
+def plain_text(content):
+    """Turn Greenhouse's entity-escaped HTML into plain text.
+
+    With ?content=true the API returns HTML escaped as entities
+    (&lt;p&gt;...), so it is unescaped once to get HTML, tags are
+    removed, and remaining entities (&amp;, &nbsp;) are unescaped.
+    """
+    if not content:
+        return None
+
+    text = html.unescape(str(content))
+    text = BLOCK_TAG.sub(" ", text)
+    text = HTML_TAG.sub("", text)
+    text = html.unescape(text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text or None
 
 
 def resolved_identifier(company):
@@ -76,10 +99,12 @@ for _, company in greenhouse_companies.iterrows():
         print(f"Skipping {company_name}: no ATS identifier")
         continue
 
-    url = f"https://boards-api.greenhouse.io/v1/boards/{identifier}/jobs"
+    # content=true adds each job's description to the response.
+    url = f"https://boards-api.greenhouse.io/v1/boards/{identifier}/jobs?content=true"
 
     try:
-        response = requests.get(url, timeout=20)
+        # Responses with descriptions are larger, so allow more time.
+        response = requests.get(url, timeout=60)
         response.raise_for_status()
 
         jobs = response.json().get("jobs") or []
@@ -102,7 +127,9 @@ for _, company in greenhouse_companies.iterrows():
                 "Employment_Type": None,
                 "Date_Posted": job.get("first_published"),
                 "Job_URL": job.get("absolute_url"),
-                "Job_Description": excel_description(None),
+                "Job_Description": excel_description(
+                    plain_text(job.get("content"))
+                ),
                 "ATS": "Greenhouse"
             })
 

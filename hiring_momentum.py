@@ -4,125 +4,61 @@ FILE_PATH = "HiddenHire_Data.xlsx"
 
 # ==========================================
 # RELEVANT ROLES
-# Same target roles, role families, and family-match
-# rules as candidate_fit.py. A job is relevant when
-# that family match would be greater than 0.
+# Role families, exclusions, and family-match rules come from
+# candidate_fit.py so the two files cannot drift apart.
+# A job is relevant when its family match would be greater than 0.
 # ==========================================
 
+from candidate_fit import (  # noqa: E402
+    ROLE_EXCLUSIONS,
+    ROLE_FAMILIES,
+    calculate_family_match,
+    find_role_families,
+)
+
+# Default roles for the command-line report. The app passes the
+# user's own target roles into calculate_hiring_momentum instead.
 TARGET_ROLES = [
     "business analyst",
     "strategy analyst",
     "operations analyst",
 ]
 
-ROLE_FAMILIES = {
-    "business_analytics": [
-        "business analyst",
-        "data analyst",
-        "business intelligence",
-        "analytics analyst",
-        "insights analyst"
-    ],
+# ==========================================
+# COMPARISON WINDOW
+# Momentum compares the latest snapshot with the earlier snapshot
+# closest to TARGET_GAP_DAYS before it. Snapshots fewer than
+# MIN_GAP_DAYS earlier are ignored, so an extra manual run does not
+# shrink the comparison to a day or two.
+# ==========================================
 
-    "strategy": [
-        "strategy analyst",
-        "strategy associate",
-        "strategic planning",
-        "corporate strategy",
-        "business strategy",
-        "strategy and operations",
-        "strategy & operations"
-    ],
+TARGET_GAP_DAYS = 7
+MIN_GAP_DAYS = 5
 
-    "operations": [
-        "operations analyst",
-        "operations associate",
-        "business operations",
-        "revenue operations",
-        "sales operations",
-        "product operations"
-    ],
 
-    "finance": [
-        "financial analyst",
-        "finance analyst",
-        "strategic finance",
-        "fp&a",
-        "corporate development"
-    ],
+def choose_comparison_dates(snapshot_dates):
+    """Return (previous_date, current_date) for the momentum comparison.
 
-    "marketing_growth": [
-        "marketing analyst",
-        "growth analyst",
-        "growth associate",
-        "growth marketing",
-        "marketing operations"
-    ],
-
-    "product": [
-        "product analyst",
-        "product associate",
-        "product manager",
-        "product operations"
-    ],
-
-    "software_engineering": [
-        "software engineer",
-        "software developer",
-        "frontend engineer",
-        "backend engineer",
-        "full stack engineer"
-    ],
-
-    "data_science_ml": [
-        "data scientist",
-        "machine learning engineer",
-        "ml engineer",
-        "ai engineer"
+    Uses the earlier snapshot closest to TARGET_GAP_DAYS before the
+    latest one, among snapshots at least MIN_GAP_DAYS earlier. If no
+    snapshot is that old yet, falls back to the one just before the
+    latest, so the app still works while history builds up.
+    """
+    dates = sorted(pd.Timestamp(d) for d in snapshot_dates)
+    current_date = dates[-1]
+    earlier = [
+        d for d in dates[:-1]
+        if (current_date - d).days >= MIN_GAP_DAYS
     ]
-}
+    if not earlier:
+        return dates[-2], current_date
 
-ROLE_EXCLUSIONS = [
-    "workplace operations",
-    "people operations",
-    "legal operations",
-    "clinical operations",
-    "security operations",
-    "facilities operations"
-]
-
-
-def find_role_families(target_roles):
-    matched_families = []
-
-    for target_role in target_roles:
-        target_role = target_role.lower()
-
-        for family, titles in ROLE_FAMILIES.items():
-            if target_role in titles:
-                if family not in matched_families:
-                    matched_families.append(family)
-
-    return matched_families
-
-
-def calculate_family_match(job_title, role_families):
-    if pd.isna(job_title):
-        return 0
-
-    job_title = str(job_title).lower()
-
-    if any(exclusion in job_title for exclusion in ROLE_EXCLUSIONS):
-        return 0
-
-    for family in role_families:
-        family_titles = ROLE_FAMILIES[family]
-
-        for title in family_titles:
-            if title in job_title:
-                return 75
-
-    return 0
+    target = current_date - pd.Timedelta(days=TARGET_GAP_DAYS)
+    previous_date = min(
+        earlier,
+        key=lambda d: (abs((d - target).days), -d.value),
+    )
+    return previous_date, current_date
 
 
 def normalize_signal(values):
@@ -142,15 +78,20 @@ def normalize_signal(values):
     return component.clip(0, 100)
 
 
-def calculate_hiring_momentum(jobs, report=False):
+def calculate_hiring_momentum(jobs, report=False, target_roles=None):
     """Return the company hiring table, including Hiring_Momentum_Score.
 
+    target_roles decides which openings count as relevant for the
+    relevant-job signals. The app passes the user's target roles;
+    when it is None, TARGET_ROLES is used.
     Passing report=True prints the same momentum report as the script.
     This function does not write the Excel workbook.
     """
     jobs = jobs.copy()
     jobs["Snapshot_Date"] = pd.to_datetime(jobs["Snapshot_Date"])
-    user_role_families = find_role_families(TARGET_ROLES)
+    if target_roles is None:
+        target_roles = TARGET_ROLES
+    user_role_families = find_role_families(target_roles)
     hiring_growth = None
 
     def _report(*args, **kwargs):
@@ -183,8 +124,16 @@ def calculate_hiring_momentum(jobs, report=False):
 
     if len(snapshot_dates) >= 2:
 
-        current_date = pd.Timestamp(snapshot_dates[-1])
-        previous_date = pd.Timestamp(snapshot_dates[-2])
+        previous_date, current_date = choose_comparison_dates(
+            snapshot_dates
+        )
+        gap_days = (current_date - previous_date).days
+        if gap_days < MIN_GAP_DAYS:
+            _report(
+                f"\nOnly {gap_days} day(s) between the compared snapshots. "
+                f"Momentum is more reliable once a snapshot at least "
+                f"{MIN_GAP_DAYS} days old exists."
+            )
 
         current_jobs = jobs[
             jobs["Snapshot_Date"].dt.normalize() == current_date

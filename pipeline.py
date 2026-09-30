@@ -35,7 +35,8 @@ def rank_hidden_opportunities(
     """Rank the latest jobs for one candidate profile.
 
     Candidate fit uses the supplied roles, skills, industries, and
-    location. Hiring momentum stays the existing company-level score.
+    location. Hiring momentum is company-level, and its relevant-job
+    signals count openings in the user's target role families.
     Hidden_Opportunity_Score is 60% fit and 40% momentum.
     """
     user_profile = {
@@ -61,7 +62,11 @@ def rank_hidden_opportunities(
         user_profile,
     )
 
-    hiring_growth = hiring_momentum.calculate_hiring_momentum(jobs)
+    # Relevant-job momentum uses this user's target roles.
+    hiring_growth = hiring_momentum.calculate_hiring_momentum(
+        jobs,
+        target_roles=user_profile["target_roles"],
+    )
     momentum_scores = hiring_growth[
         ["Company_ID", "Hiring_Momentum_Score"]
     ].copy()
