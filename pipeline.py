@@ -31,11 +31,13 @@ def rank_hidden_opportunities(
     preferred_industries,
     location,
     file_path=FILE_PATH,
+    experience_level="entry",
 ):
     """Rank the latest jobs for one candidate profile.
 
-    Candidate fit uses the supplied roles, skills, industries, and
-    location. Hiring momentum is company-level, and its relevant-job
+    Candidate fit uses the supplied roles, skills, industries,
+    location, and experience level ("entry", "mid", or "senior").
+    Hiring momentum is company-level, and its relevant-job
     signals count openings in the user's target role families.
     Hidden_Opportunity_Score is 60% fit and 40% momentum.
     """
@@ -44,6 +46,7 @@ def rank_hidden_opportunities(
         "skills": list(skills),
         "industries": list(preferred_industries),
         "location": location,
+        "experience_level": experience_level,
     }
 
     jobs = pd.read_excel(file_path, sheet_name="Job_Snapshots")

@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 
 FILE_PATH = "HiddenHire_Data.xlsx"
@@ -26,11 +28,8 @@ user_profile = {
         "enterprise software"
     ],
 
- "experience_level": [
-        "intern",
-        "entry level",
-        "associate"
-    ],
+    # One of EXPERIENCE_LEVELS: "entry", "mid", or "senior".
+    "experience_level": "entry",
 
     "location": "New York"
 }
@@ -115,25 +114,122 @@ ROLE_EXCLUSIONS = [
     "facilities operations"
 ]
 
+# ==========================================
+# WHOLE-WORD MATCHING
+# Terms match only as whole words, so "excel" does not match
+# "excellent", "ai" does not match "supply chain", and "intern"
+# does not match "international". A term may contain spaces or
+# symbols ("fp&a", "c++", "head of"); it just cannot sit inside
+# a longer word.
+# ==========================================
+
+
+def contains_term(text, term):
+    """Return True when term appears in text as a whole word or phrase."""
+    if text is None or term is None:
+        return False
+    if isinstance(text, float) and pd.isna(text):
+        return False
+
+    term = str(term).strip().lower()
+    if not term:
+        return False
+
+    pattern = r"(?<![a-z0-9])" + re.escape(term) + r"(?![a-z0-9])"
+    return re.search(pattern, str(text).lower()) is not None
+
+
+def supported_roles():
+    """Every role phrase HiddenHire can match, in role-family order."""
+    roles = []
+    for titles in ROLE_FAMILIES.values():
+        for title in titles:
+            if title not in roles:
+                roles.append(title)
+    return roles
+
+
+# ==========================================
+# SENIORITY
+# A title is classified as senior, mid, entry, or unknown. The
+# first group with a whole-word hit wins, in that order, so
+# "Senior Associate" is senior and "Associate Product Manager"
+# is entry. The level is then scored against the user's chosen
+# experience level.
+# ==========================================
+
+EXPERIENCE_LEVELS = ["entry", "mid", "senior"]
+
 SENIOR_TITLES = [
     "senior",
+    "sr",
     "sr.",
-    "manager",
-    "director",
+    "staff",
+    "principal",
+    "lead",
     "head of",
+    "director",
     "vice president",
     "vp",
-    "principal",
-    "lead"
+    "chief",
 ]
 
 ENTRY_TITLES = [
     "intern",
+    "internship",
+    "new grad",
+    "graduate",
+    "junior",
+    "jr",
+    "entry level",
+    "entry-level",
+    "apprentice",
     "analyst",
     "associate",
     "coordinator",
-    "specialist"
+    "specialist",
 ]
+
+MID_TITLES = [
+    "manager",
+    "ii",
+    "iii",
+]
+
+# Rows: the user's experience level. Columns: the title's level.
+# Unknown titles score 50 for everyone, as before.
+SENIORITY_SCORES = {
+    "entry": {"entry": 100, "mid": 40, "senior": 0, "unknown": 50},
+    "mid": {"entry": 50, "mid": 100, "senior": 40, "unknown": 50},
+    "senior": {"entry": 0, "mid": 50, "senior": 100, "unknown": 50},
+}
+
+
+def classify_seniority(job_title):
+    """Return "senior", "entry", "mid", or "unknown" for a job title."""
+    if job_title is None or (isinstance(job_title, float) and pd.isna(job_title)):
+        return "unknown"
+
+    # "Member of Technical Staff" / "Member of GTM Staff" is a generic
+    # startup title, not a staff-level (senior) role.
+    title = re.sub(r"member of [\w\s&]*?staff", " ", str(job_title).lower())
+    for level, terms in [
+        ("senior", SENIOR_TITLES),
+        ("entry", ENTRY_TITLES),
+        ("mid", MID_TITLES),
+    ]:
+        if any(contains_term(title, term) for term in terms):
+            return level
+    return "unknown"
+
+
+def normalize_experience_level(experience_level):
+    """Map a user's experience level to "entry", "mid", or "senior"."""
+    level = str(experience_level or "entry").strip().lower()
+    for option in EXPERIENCE_LEVELS:
+        if level.startswith(option):
+            return option
+    return "entry"
 
 
 def find_role_families(target_roles):
@@ -150,102 +246,96 @@ def find_role_families(target_roles):
     return matched_families
 
 
+def is_excluded_title(job_title):
+    """True for titles in unrelated operations families."""
+    return any(
+        contains_term(job_title, exclusion)
+        for exclusion in ROLE_EXCLUSIONS
+    )
+
+
 def calculate_role_match(job_title, target_roles):
-    if pd.isna(job_title):
+    """100 when a target role appears in the title as a whole phrase."""
+    if job_title is None or (isinstance(job_title, float) and pd.isna(job_title)):
         return 0
 
-    job_title = str(job_title).lower()
+    if is_excluded_title(job_title):
+        return 0
 
     for role in target_roles:
-        role = role.lower()
-
-        # Exact target role appears in job title
-        if role in job_title:
+        if contains_term(job_title, role):
             return 100
 
     return 0
 
 
 def calculate_family_match(job_title, role_families):
-    if pd.isna(job_title):
+    """75 when the title belongs to one of the user's role families."""
+    if job_title is None or (isinstance(job_title, float) and pd.isna(job_title)):
         return 0
 
-    job_title = str(job_title).lower()
-
     # Exclude unrelated operations roles
-    if any(exclusion in job_title for exclusion in ROLE_EXCLUSIONS):
+    if is_excluded_title(job_title):
         return 0
 
     for family in role_families:
-        family_titles = ROLE_FAMILIES[family]
-
-        for title in family_titles:
-            if title in job_title:
+        for title in ROLE_FAMILIES[family]:
+            if contains_term(job_title, title):
                 return 75
 
     return 0
 
 
-def calculate_seniority_match(job_title):
-    if pd.isna(job_title):
-        return 0
-
-    job_title = str(job_title).lower()
-
-    # Clearly senior roles
-    if any(title in job_title for title in SENIOR_TITLES):
-        return 0
-
-    # Clearly early-career roles
-    if any(title in job_title for title in ENTRY_TITLES):
+def calculate_title_match(role_match, family_match):
+    """Title component of fit: 100 for an exact target role, else family."""
+    if family_match > 0 and role_match > 0:
         return 100
+    return family_match
 
-    # Unclear / no seniority stated
-    return 50
+
+def calculate_seniority_match(job_title, experience_level="entry"):
+    level = normalize_experience_level(experience_level)
+    return SENIORITY_SCORES[level][classify_seniority(job_title)]
+
+
+def matched_skills(job_description, user_skills):
+    """Skills from the user's list that appear in the description."""
+    return [
+        skill for skill in user_skills
+        if contains_term(job_description, skill)
+    ]
 
 
 def calculate_skill_match(job_description, user_skills):
-    if pd.isna(job_description):
-        return 0
-
-    description = str(job_description).lower()
-
-    matched_skills = []
-
-    for skill in user_skills:
-        if skill.lower() in description:
-            matched_skills.append(skill)
-
+    """Share of the user's skills found in the posting, 0-100."""
     if len(user_skills) == 0:
         return 0
+    if job_description is None or (
+        isinstance(job_description, float) and pd.isna(job_description)
+    ):
+        return 0
 
-    skill_score = (
-        len(matched_skills) / len(user_skills)
-    ) * 100
+    found = matched_skills(job_description, user_skills)
+    return round(len(found) / len(user_skills) * 100)
 
-    return round(skill_score)
+
+def matched_industries(company_industry, preferred_industries):
+    """Preferred industries that appear in the company's industry label."""
+    return [
+        industry for industry in preferred_industries
+        if contains_term(company_industry, industry)
+    ]
 
 
 def calculate_industry_match(company_industry, preferred_industries):
-    if pd.isna(company_industry):
-        return 0
+    """100 when the company is in any preferred industry, else 0.
 
-    company_industry = str(company_industry).lower()
-
-    matched_industries = []
-
-    for industry in preferred_industries:
-        if industry.lower() in company_industry:
-            matched_industries.append(industry)
-
-    if len(preferred_industries) == 0:
-        return 0
-
-    industry_score = (
-        len(matched_industries) / len(preferred_industries)
-    ) * 100
-
-    return round(industry_score)
+    Listing more preferred industries widens the search. It no longer
+    lowers the score of a company that matches one of them.
+    """
+    if matched_industries(company_industry, preferred_industries):
+        return 100
+    return 0
 
 
 def calculate_location_match(job_location, preferred_location):
@@ -278,10 +368,17 @@ def calculate_location_match(job_location, preferred_location):
 
 
 def score_candidate_fit(latest_jobs, companies, user_profile, report=False):
-    """Score jobs with the existing candidate-fit weights.
+    """Score jobs for one candidate profile.
+
+    Candidate_Fit_Score = 35% title (100 for an exact target role,
+    75 for another title in the same role family), 25% seniority
+    against the profile's experience_level, 20% skills, 10% industry,
+    and 10% location.
 
     Returns the same rows the Candidate_Fit sheet saves:
-    role-family matches with Candidate_Fit_Score of at least 40.
+    role-family matches with Candidate_Fit_Score of at least 40,
+    leaving out titles two levels away from the user's experience
+    level (for example, Director roles in an entry-level search).
     Passing report=True prints the same audit as the script.
     This function does not write the Excel workbook.
     """
@@ -338,8 +435,9 @@ def score_candidate_fit(latest_jobs, companies, user_profile, report=False):
         .to_string(index=False)
     )
 
+    experience_level = user_profile.get("experience_level", "entry")
     latest_jobs["Seniority_Match"] = latest_jobs["Job_Title"].apply(
-        calculate_seniority_match
+        lambda title: calculate_seniority_match(title, experience_level)
     )
 
     _report("\n=== SENIORITY MATCH AUDIT ===")
@@ -485,17 +583,29 @@ def score_candidate_fit(latest_jobs, companies, user_profile, report=False):
         .to_string(index=False)
     )
 
+    latest_jobs["Title_Match"] = [
+        calculate_title_match(role, family)
+        for role, family in zip(
+            latest_jobs["Role_Match"],
+            latest_jobs["Family_Match"],
+        )
+    ]
+
     latest_jobs["Candidate_Fit_Score"] = (
-        latest_jobs["Family_Match"] * 0.35
+        latest_jobs["Title_Match"] * 0.35
         + latest_jobs["Seniority_Match"] * 0.25
         + latest_jobs["Skill_Match"] * 0.20
         + latest_jobs["Industry_Match"] * 0.10
         + latest_jobs["Location_Match"] * 0.10
     ).round(1)
 
-    # Only rank jobs that belong to the user's target role families
+    # Only rank jobs that belong to the user's target role families.
+    # Seniority_Match of 0 means the title is two levels away from the
+    # user's experience level (a senior title for an entry-level search,
+    # or the reverse), so those jobs are left out.
     recommended_jobs = latest_jobs[
-        latest_jobs["Family_Match"] > 0
+        (latest_jobs["Family_Match"] > 0)
+        & (latest_jobs["Seniority_Match"] > 0)
     ].copy()
 
     recommended_jobs = recommended_jobs.sort_values(
@@ -533,7 +643,9 @@ def score_candidate_fit(latest_jobs, companies, user_profile, report=False):
             "Location",
             "Job_URL",
             "Industry",
+            "Role_Match",
             "Family_Match",
+            "Title_Match",
             "Seniority_Match",
             "Skill_Match",
             "Industry_Match",
@@ -563,6 +675,7 @@ def main():
     print("Skills:", user_profile["skills"])
     print("Industries:", user_profile["industries"])
     print("Location:", user_profile["location"])
+    print("Experience level:", user_profile["experience_level"])
 
     jobs = pd.read_excel(FILE_PATH, sheet_name="Job_Snapshots")
 

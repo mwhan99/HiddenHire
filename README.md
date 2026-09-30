@@ -45,9 +45,17 @@ A GitHub Actions workflow runs the collectors in sequence, recalculates hiring m
 
 Scores are rule-based. HiddenHire does not use an external language model.
 
-**Candidate Fit** compares an opening with the profile. The current score uses role family (35%), seniority (25%), skills found in the posting (20%), industry (10%), and location (10%). Results are limited to jobs that match a target role family and meet the project’s fit cutoff.
+**Candidate Fit** compares an opening with the profile:
 
-**Hiring Momentum** is a company-level score. It compares the latest snapshot with the previous one: newly opened roles in relevant families (40%), the net change in those relevant roles (25%), the overall open-job growth rate (20%), and new postings overall (15%).
+- **Title (35%)**: 100 when the title contains a target role exactly, 75 for another title in the same role family.
+- **Seniority (25%)**: the title is classified as entry, mid, or senior and scored against the experience level the candidate picks.
+- **Skills (20%)**: the share of the candidate's skills found in the posting.
+- **Industry (10%)**: full credit when the company is in any preferred industry.
+- **Location (10%)**: full credit for the preferred location, partial credit for remote.
+
+Skills, industries, roles, and seniority words match as whole words, so "Excel" does not match "excellent" and "intern" does not match "international". Results are limited to jobs in a target role family that meet the fit cutoff, leaving out titles two levels away from the chosen experience level.
+
+**Hiring Momentum** is a company-level score. It compares the latest snapshot with the snapshot closest to seven days earlier: newly opened roles in the candidate's target role families (40%), the net change in those relevant roles (25%), the overall open-job growth rate (20%), and new postings overall (15%).
 
 **Hidden Opportunity** ranks each job as 60% Candidate Fit and 40% Hiring Momentum.
 
@@ -61,6 +69,14 @@ The explanation under each result uses only signals those scores already support
 - Excel workbooks via OpenPyXL
 - Requests for public job-board APIs
 - GitHub Actions for the weekly update
+- pytest for the scoring tests
+
+## Running the Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
 
 ## MVP Status
 
