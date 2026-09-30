@@ -61,20 +61,49 @@ def choose_comparison_dates(snapshot_dates):
     return previous_date, current_date
 
 
+# ==========================================
+# SIZE-ADJUSTED SIGNALS
+# Job counts are divided by the company's open jobs in the earlier
+# snapshot, so 5 new roles at a 15-job startup counts for more than
+# 5 new roles at a 150-job company. The divisor is at least
+# MIN_SIZE_FOR_RATES (10) so a company with only a few openings does not jump
+# to the top by adding a single job.
+# ==========================================
+
+MIN_SIZE_FOR_RATES = 10
+
+# The value at this percentile of non-zero changes sets the 0–100
+# scale, so one extreme company cannot flatten everyone else.
+SCALE_PERCENTILE = 0.90
+
+
+def size_adjusted(counts, previous_open_jobs):
+    """Divide a job count by the company's earlier size (floored)."""
+    size = previous_open_jobs.fillna(0).clip(lower=MIN_SIZE_FOR_RATES)
+    return counts.fillna(0) / size
+
+
 def normalize_signal(values):
     """Scale one signal to 0–100. A flat signal scores 50.
 
-    The largest absolute value among tracked companies sets the scale.
-    Positive values move toward 100. Negative values move toward 0.
-    A decline therefore stays below a company with no change.
+    The 90th percentile of non-zero absolute values sets the scale,
+    and anything beyond it is capped at 0 or 100. Positive values move
+    toward 100. Negative values move toward 0, so a decline stays below
+    a company with no change.
     """
-    values = values.fillna(0)
-    max_abs = values.abs().max()
+    values = values.fillna(0).astype(float)
+    nonzero = values[values != 0].abs()
 
-    if pd.isna(max_abs) or max_abs == 0:
+    if nonzero.empty:
         return pd.Series(50.0, index=values.index)
 
-    component = 50 + 50 * (values / max_abs)
+    # "nearest" uses an actual observed value, so with few companies the
+    # scale is not pulled toward the single largest one.
+    scale = nonzero.quantile(SCALE_PERCENTILE, interpolation="nearest")
+    if pd.isna(scale) or scale == 0:
+        scale = nonzero.max()
+
+    component = 50 + 50 * (values / scale)
     return component.clip(0, 100)
 
 
@@ -556,22 +585,55 @@ def calculate_hiring_momentum(jobs, report=False, target_roles=None):
         # 25% net relevant job change
         # 20% overall job growth rate
         # 15% new job postings
+        # Every signal is relative to the company's earlier open jobs
+        # (see size_adjusted), so large employers do not win on volume.
         # ==========================================
 
+        previous_size = hiring_growth["Previous_Open_Jobs"]
+
+        hiring_growth["New_Relevant_Rate"] = size_adjusted(
+            hiring_growth["New_Relevant_Jobs_7D"], previous_size
+        ).round(3)
+        hiring_growth["Relevant_Job_Change_Rate"] = size_adjusted(
+            hiring_growth["Relevant_Job_Change_7D"], previous_size
+        ).round(3)
+        hiring_growth["Job_Growth_Rate"] = size_adjusted(
+            hiring_growth["Job_Change_7D"], previous_size
+        ).round(3)
+        hiring_growth["New_Jobs_Rate"] = size_adjusted(
+            hiring_growth["New_Jobs_7D"], previous_size
+        ).round(3)
+
+        # A company with no jobs in the earlier snapshot is usually one
+        # that was just added to the list, so every opening would look
+        # new. Its signals are held at neutral until it has a baseline.
+        hiring_growth["Newly_Tracked"] = previous_size.fillna(0) == 0
+        rate_columns = [
+            "New_Relevant_Rate",
+            "Relevant_Job_Change_Rate",
+            "Job_Growth_Rate",
+            "New_Jobs_Rate",
+        ]
+        hiring_growth.loc[hiring_growth["Newly_Tracked"], rate_columns] = 0.0
+        _report(
+            "\nNewly tracked companies held at neutral momentum:",
+            hiring_growth.loc[hiring_growth["Newly_Tracked"], "Company_Name"].tolist(),
+        )
+
         hiring_growth["New_Relevant_Component"] = normalize_signal(
-            hiring_growth["New_Relevant_Jobs_7D"]
+            hiring_growth["New_Relevant_Rate"]
         ).round(1)
 
         hiring_growth["Relevant_Job_Change_Component"] = normalize_signal(
-            hiring_growth["Relevant_Job_Change_7D"]
+            hiring_growth["Relevant_Job_Change_Rate"]
         ).round(1)
 
         hiring_growth["Job_Growth_Component"] = normalize_signal(
-            hiring_growth["Job_Growth_7D_Pct"]
+            hiring_growth["Job_Growth_Rate"]
         ).round(1)
 
         hiring_growth["New_Jobs_Component"] = normalize_signal(
-            hiring_growth["New_Jobs_7D"]
+            hiring_growth["New_Jobs_Rate"]
         ).round(1)
 
         hiring_growth["Hiring_Momentum_Score"] = (

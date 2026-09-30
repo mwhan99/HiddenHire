@@ -41,6 +41,34 @@ Public job posts are collected from company boards on Ashby, Greenhouse, and Lev
 
 A GitHub Actions workflow runs the collectors in sequence, recalculates hiring momentum, and commits the updated workbook. It is scheduled for Monday morning New York time and can also be started manually. The company master list is not updated by the workflow.
 
+## Company Coverage
+
+HiddenHire tracks a curated list rather than the whole job market. The list was assembled in September 2026 and contains 50 New York-based, venture-backed companies sourced from StartupsGallery, TopStartups, and Y Combinator's company directory. Most are Series A or B and have 11–500 employees, across AI, fintech, health tech, and enterprise software.
+
+43 companies are collected each week: those hiring through Ashby, Greenhouse, or Lever. The other 7 are marked inactive in the `Active` column, 6 because they use job boards without a collector (Gem, Comeet, Dover). Together the active companies post about 1,200 open roles, and snapshots have been kept weekly since September 20, 2026.
+
+## Data Quality Fixes
+
+Problems found in the data and scoring, and how they were fixed:
+
+- **Missing descriptions:** the Greenhouse collector stored no job descriptions, so more than a quarter of all postings scored 0 on skills. It now requests and cleans the full text. Lever postings now include their requirements bullets, not just the introduction.
+- **One-day momentum window:** momentum compared the two most recent snapshots, which were one day apart when a manual run followed a scheduled one. It now uses the snapshot closest to seven days earlier.
+- **Substring matching:** "Excel" matched "excellent" (519 postings contained "excel", 53 mentioned the skill), "AI" matched "Supply Chain", and "intern" matched "international". All matching is now whole-word.
+- **Hard-coded relevance:** momentum always counted analyst roles, whatever the candidate searched for. It now uses the candidate's target roles.
+- **Size bias:** momentum used raw job counts, so the largest employers ranked highest. Signals are now relative to company size.
+
+Each fix has tests in `tests/`.
+
+## Limitations
+
+- **Coverage:** results only include the companies on the list. A strong opening elsewhere will not appear.
+- **Short history:** momentum is built from weekly snapshots starting in late September 2026. With a few weeks of data, one new posting at a small company can move its score noticeably. Whether high momentum predicts continued hiring has not been tested yet.
+- **Rule-based matching:** skills and roles are matched by keyword. Synonyms ("BI" vs. "business intelligence"), plurals, and roles outside the built-in role families are missed.
+- **Seniority from titles:** experience level is inferred from job titles only. Requirements stated in the description, such as "3+ years", are not read.
+- **Simple location matching:** locations are matched as text, and every remote posting gets partial credit regardless of region.
+- **Storage:** snapshots live in one Excel workbook that is rewritten each week. It works at this scale but will slow down as history grows.
+- **Hosting:** the free Streamlit tier puts the app to sleep after inactivity, so the first visit can take about 30 seconds to load.
+
 ## Scoring
 
 Scores are rule-based. HiddenHire does not use an external language model.
@@ -56,6 +84,8 @@ Scores are rule-based. HiddenHire does not use an external language model.
 Skills, industries, roles, and seniority words match as whole words, so "Excel" does not match "excellent" and "intern" does not match "international". Results are limited to jobs in a target role family that meet the fit cutoff, leaving out titles two levels away from the chosen experience level.
 
 **Hiring Momentum** is a company-level score. It compares the latest snapshot with the snapshot closest to seven days earlier: newly opened roles in the candidate's target role families (40%), the net change in those relevant roles (25%), the overall open-job growth rate (20%), and new postings overall (15%).
+
+Each signal is measured relative to the company's size (its open jobs a week earlier, counted as at least 10), so five new roles at a 15-job startup outweigh five new roles at a 150-job company. Signals are scaled against the 90th percentile across companies, so one extreme company does not flatten everyone else. A company added to the list this week has no baseline yet and scores a neutral 50. Companies marked inactive are left out.
 
 **Hidden Opportunity** ranks each job as 60% Candidate Fit and 40% Hiring Momentum.
 
@@ -92,9 +122,10 @@ HiddenHire is an independently developed MVP and portfolio project. It is active
 
 ## Future Development
 
+- Market insights: which companies and job functions are growing or slowing week over week
+- Check whether high-momentum companies keep hiring in the following weeks
 - Highlight roles that newly appear between historical snapshots
 - Collect from additional applicant-tracking systems
-- Extend the hiring signals already calculated from snapshots
 - Add international-student sponsorship signals
 
 ## Author
