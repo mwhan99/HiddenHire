@@ -93,6 +93,17 @@ st.markdown(
             border: 1px solid #d7e0e7 !important;
             border-radius: 10px !important;
         }
+        [data-testid="stMultiSelect"] div[data-baseweb="select"] > div,
+        [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+            background: #f8fafb !important;
+            border: 1px solid #d7e0e7 !important;
+            border-radius: 10px !important;
+        }
+        [data-testid="stMultiSelect"] span[data-baseweb="tag"] {
+            background: #0e4c5c !important;
+            color: #ffffff !important;
+            border-radius: 8px !important;
+        }
         div[data-testid="stFormSubmitButton"] button {
             background: #0e4c5c;
             color: #ffffff;
@@ -275,9 +286,32 @@ def join_phrases(items):
     return ", ".join(items[:-1]) + ", and " + items[-1]
 
 
+ROLE_LABEL_WORDS = {
+    "fp&a": "FP&A",
+    "ml": "ML",
+    "ai": "AI",
+}
+
+EXPERIENCE_OPTIONS = {
+    "entry": "Entry level / internship",
+    "mid": "Mid level",
+    "senior": "Senior",
+}
+
+DEFAULT_ROLES = ["business analyst", "strategy analyst", "operations analyst"]
+
+
+def role_label(role):
+    """Display name for a role phrase, e.g. "fp&a" -> "FP&A"."""
+    return " ".join(
+        ROLE_LABEL_WORDS.get(word, word.capitalize())
+        for word in role.split()
+    )
+
+
 def matched_family_labels(job_title, target_roles):
-    title = "" if job_title is None else str(job_title).lower()
-    if any(exclusion in title for exclusion in candidate_fit.ROLE_EXCLUSIONS):
+    title = "" if job_title is None else str(job_title)
+    if candidate_fit.is_excluded_title(title):
         return []
 
     labels = []
@@ -286,7 +320,7 @@ def matched_family_labels(job_title, target_roles):
     )
     for family in families:
         phrases = candidate_fit.ROLE_FAMILIES[family]
-        if any(phrase in title for phrase in phrases):
+        if any(candidate_fit.contains_term(title, phrase) for phrase in phrases):
             labels.append(FAMILY_LABELS[family])
     return labels
 
@@ -349,7 +383,7 @@ def explain_opportunity(row, profile):
 
     exact_roles = [
         role for role in target_roles
-        if role and role.lower() in title.lower()
+        if role and candidate_fit.calculate_role_match(title, [role]) > 0
     ]
     if exact_roles:
         noun = "role" if len(exact_roles) == 1 else "roles"
@@ -363,10 +397,10 @@ def explain_opportunity(row, profile):
         else:
             role_phrase = ""
 
-    industry_hits = [
-        industry for industry in preferred_industries
-        if industry and industry.lower() in industry_text.lower()
-    ]
+    industry_hits = candidate_fit.matched_industries(
+        industry_text,
+        [industry for industry in preferred_industries if industry],
+    )
     if signal_above(row, "Industry_Match", 0) and industry_hits:
         noun = "industry" if len(industry_hits) == 1 else "industries"
         industry_phrase = f"your preferred {join_phrases(industry_hits)} {noun}"
@@ -468,10 +502,20 @@ st.markdown('<p class="section-label">Your profile</p>', unsafe_allow_html=True)
 with st.form("profile"):
     left, right = st.columns(2)
     with left:
-        target_roles_text = st.text_input(
+        target_roles = st.multiselect(
             "Target Roles",
-            value="business analyst, strategy analyst, operations analyst",
-            help="Separate roles with commas.",
+            options=candidate_fit.supported_roles(),
+            default=DEFAULT_ROLES,
+            format_func=role_label,
+            placeholder="Choose one or more roles",
+            help="HiddenHire can match these roles. Similar roles in "
+            "the same family are included automatically.",
+        )
+        experience_level = st.selectbox(
+            "Experience Level",
+            options=list(EXPERIENCE_OPTIONS),
+            format_func=EXPERIENCE_OPTIONS.get,
+            help="Postings at your level score highest on seniority.",
         )
         skills_text = st.text_input(
             "Skills",
@@ -493,10 +537,14 @@ with st.form("profile"):
         type="primary",
     )
 
-if submitted:
+if submitted and not target_roles:
+    st.warning("Choose at least one target role.")
+    st.session_state.pop("results", None)
+elif submitted:
     with st.spinner("Finding hidden opportunities..."):
         profile = {
-            "target_roles": split_csv(target_roles_text),
+            "target_roles": list(target_roles),
+            "experience_level": experience_level,
             "skills": split_csv(skills_text),
             "industries": split_csv(industries_text),
             "location": location.strip(),
@@ -506,6 +554,7 @@ if submitted:
             profile["skills"],
             profile["industries"],
             profile["location"],
+            experience_level=profile["experience_level"],
         )
         results = results.sort_values(
             [
@@ -524,7 +573,15 @@ results = st.session_state.get("results")
 if results is None:
     st.caption("Enter a profile, then find opportunities.")
 elif results.empty:
-    st.info("No matched opportunities for this profile.")
+    searched = st.session_state.get("search_profile", {})
+    roles = join_phrases(
+        [role_label(role) for role in searched.get("target_roles", [])]
+    )
+    st.info(
+        f"No current openings for {roles} reached a Candidate Fit of 40. "
+        "Try adding related roles, a different experience level, "
+        "or a broader location."
+    )
 else:
     count = len(results)
     label = "opportunity" if count == 1 else "opportunities"

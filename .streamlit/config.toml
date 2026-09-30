@@ -1,0 +1,8 @@
+# Keep the app in its light design even when a visitor's system
+# is in dark mode, so the dropdowns match the rest of the page.
+[theme]
+base = "light"
+primaryColor = "#0e4c5c"
+backgroundColor = "#f4f6f8"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#17212b"
