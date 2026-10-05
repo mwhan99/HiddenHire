@@ -1,10 +1,12 @@
 import html
+import os
 
 import pandas as pd
 import streamlit as st
 
 import candidate_fit
-from pipeline import rank_hidden_opportunities
+import market_insights
+from pipeline import FILE_PATH, rank_hidden_opportunities
 
 st.set_page_config(
     page_title="HiddenHire",
@@ -66,6 +68,11 @@ st.markdown(
             color: #5c6d7a;
             font-size: 0.98rem;
             line-height: 1.55;
+            margin: 0 0 1rem 0;
+        }
+        .data-line {
+            color: #5c6d7a;
+            font-size: 0.88rem;
             margin: 0 0 1rem 0;
         }
         .section-label {
@@ -462,6 +469,157 @@ def explain_opportunity(row, profile):
     return f"{fit_sentence} {momentum_sentence}"
 
 
+
+def format_date(value):
+    """Sep 30, 2026"""
+    stamp = pd.Timestamp(value)
+    return f"{stamp:%b} {stamp.day}, {stamp.year}"
+
+
+def signed(value):
+    return f"{int(value):+,}"
+
+
+@st.cache_data(show_spinner=False)
+def load_market_data(file_mtime):
+    """Market Insights tables. file_mtime makes the cache refresh when
+    the weekly update changes the workbook."""
+    jobs, companies = market_insights.load_history(FILE_PATH)
+    movers = market_insights.company_movers(jobs, companies)
+    return {
+        "headline": market_insights.headline(jobs),
+        "growing": market_insights.fastest_growing(movers),
+        "slowing": market_insights.slowing_down(movers),
+        "functions": market_insights.roles_by_function(jobs),
+        "industries": market_insights.roles_by_industry(jobs, companies),
+        "trend": market_insights.open_roles_over_time(jobs),
+    }
+
+
+def short_industry(industry):
+    return " / ".join(market_insights.industry_tags(industry)[:2])
+
+
+def movers_table(movers):
+    return pd.DataFrame({
+        "Company": movers["Company"],
+        "Industry": movers["Industry"].map(short_industry),
+        "Open roles": movers["Open_Now"].astype(int),
+        "Change": movers["Net_Change"].map(signed),
+        "Change %": movers["Change_Pct"].map(lambda pct: f"{int(pct):+d}%"),
+        "New": movers["New_Roles"].astype(int),
+        "Closed": movers["Closed_Roles"].astype(int),
+    })
+
+
+def breakdown_table(table, label_column, label):
+    return pd.DataFrame({
+        label: table[label_column],
+        "Open roles": table["Open_Now"].astype(int),
+        "Change": table["Net_Change"].map(signed),
+    })
+
+
+def render_market_insights(data):
+    summary = data["headline"]
+    if summary["previous_date"] is None:
+        st.info("Market Insights needs at least two weekly snapshots.")
+        return
+
+    previous_label = format_date(summary["previous_date"])
+    st.markdown(
+        f'<p class="section-label">This week across {summary["companies"]} '
+        "companies</p>",
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        f"Comparing {format_date(summary['latest_date'])} with "
+        f"{previous_label} ({summary['gap_days']} days apart)."
+    )
+
+    open_col, new_col, closed_col, movers_col = st.columns(4)
+    open_col.metric(
+        "Open roles",
+        f"{summary['open_roles']:,}",
+        delta=f"{summary['open_roles'] - summary['previous_open_roles']:+,} vs last week",
+    )
+    new_col.metric("New postings", f"{summary['new_roles']:,}")
+    closed_col.metric("Closed postings", f"{summary['closed_roles']:,}")
+    movers_col.metric(
+        "Growing / slowing",
+        f"{summary['companies_growing']} / {summary['companies_slowing']}",
+        help="Companies with more / fewer open roles than last week.",
+    )
+
+    st.markdown('<p class="section-label">Fastest-growing companies</p>',
+                unsafe_allow_html=True)
+    if data["growing"].empty:
+        st.caption("No company added open roles this week.")
+    else:
+        st.dataframe(movers_table(data["growing"]), hide_index=True)
+        st.caption(
+            "Ranked by net change relative to company size (companies with "
+            "fewer than 10 openings count as 10), the same adjustment "
+            "Hiring Momentum uses."
+        )
+
+    st.markdown('<p class="section-label">Slowing down</p>',
+                unsafe_allow_html=True)
+    if data["slowing"].empty:
+        st.caption("No company reduced its open roles this week.")
+    else:
+        st.dataframe(movers_table(data["slowing"]), hide_index=True)
+
+    functions = data["functions"]
+    st.markdown('<p class="section-label">Open roles by job function</p>',
+                unsafe_allow_html=True)
+    st.dataframe(
+        breakdown_table(functions, "Function", "Function"),
+        hide_index=True,
+        column_config={
+            "Open roles": st.column_config.ProgressColumn(
+                "Open roles",
+                format="%d",
+                min_value=0,
+                max_value=int(functions["Open_Now"].max()),
+            ),
+        },
+    )
+    st.caption("Functions are assigned from job titles by keyword.")
+
+    industries = data["industries"]
+    st.markdown('<p class="section-label">Open roles by industry</p>',
+                unsafe_allow_html=True)
+    st.dataframe(
+        breakdown_table(industries, "Industry", "Industry"),
+        hide_index=True,
+        column_config={
+            "Open roles": st.column_config.ProgressColumn(
+                "Open roles",
+                format="%d",
+                min_value=0,
+                max_value=int(industries["Open_Now"].max()),
+            ),
+        },
+    )
+    st.caption(
+        "Companies can carry several industry tags, so their roles count "
+        "toward each tag and the column does not add up to the total."
+    )
+
+    trend = data["trend"]
+    st.markdown('<p class="section-label">Open roles over time</p>',
+                unsafe_allow_html=True)
+    st.line_chart(
+        trend.set_index("Snapshot_Date")["Open_Roles"].rename("Open roles"),
+        height=240,
+    )
+    st.caption(
+        f"Each point is one snapshot, starting {format_date(trend['Snapshot_Date'].min())}. "
+        "A new snapshot is added every Monday."
+    )
+
+
 st.markdown("# HiddenHire")
 st.markdown(
     '<p class="tagline">Discover emerging companies hiring for you.</p>',
@@ -478,167 +636,182 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-with st.expander("How the scores work"):
-    st.markdown(
-        """
-        <div class="method-row">
-            <div class="method-name">Candidate Fit</div>
-            <div class="method-copy">How well the role matches your profile.</div>
-        </div>
-        <div class="method-row">
-            <div class="method-name">Hiring Momentum</div>
-            <div class="method-copy">Recent hiring activity at the company.</div>
-        </div>
-        <div class="method-row">
-            <div class="method-name">Hidden Opportunity</div>
-            <div class="method-copy">60% Candidate Fit + 40% Hiring Momentum.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+market_data = load_market_data(os.path.getmtime(FILE_PATH))
+market_summary = market_data["headline"]
+st.markdown(
+    f'<p class="data-line">Data updated {format_date(market_summary["latest_date"])}'
+    f' · {market_summary["companies"]} companies'
+    f' · {market_summary["open_roles"]:,} open roles</p>',
+    unsafe_allow_html=True,
+)
 
-st.markdown('<p class="section-label">Your profile</p>', unsafe_allow_html=True)
+search_tab, market_tab = st.tabs(["Find Opportunities", "Market Insights"])
 
-with st.form("profile"):
-    left, right = st.columns(2)
-    with left:
-        target_roles = st.multiselect(
-            "Target Roles",
-            options=candidate_fit.supported_roles(),
-            default=DEFAULT_ROLES,
-            format_func=role_label,
-            placeholder="Choose one or more roles",
-            help="HiddenHire can match these roles. Similar roles in "
-            "the same family are included automatically.",
+with search_tab:
+    with st.expander("How the scores work"):
+        st.markdown(
+            """
+            <div class="method-row">
+                <div class="method-name">Candidate Fit</div>
+                <div class="method-copy">How well the role matches your profile.</div>
+            </div>
+            <div class="method-row">
+                <div class="method-name">Hiring Momentum</div>
+                <div class="method-copy">Recent hiring activity at the company.</div>
+            </div>
+            <div class="method-row">
+                <div class="method-name">Hidden Opportunity</div>
+                <div class="method-copy">60% Candidate Fit + 40% Hiring Momentum.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-        experience_level = st.selectbox(
-            "Experience Level",
-            options=list(EXPERIENCE_OPTIONS),
-            format_func=EXPERIENCE_OPTIONS.get,
-            help="Postings at your level score highest on seniority.",
-        )
-        skills_text = st.text_input(
-            "Skills",
-            value="SQL, Excel, Tableau, Python",
-            help="Separate skills with commas.",
-        )
-    with right:
-        industries_text = st.text_input(
-            "Preferred Industries",
-            value="fintech, AI, enterprise software",
-            help="Separate industries with commas.",
-        )
-        location = st.text_input(
-            "Preferred Location",
-            value="New York",
-        )
-    submitted = st.form_submit_button(
-        "Find Hidden Opportunities",
-        type="primary",
-    )
 
-if submitted and not target_roles:
-    st.warning("Choose at least one target role.")
-    st.session_state.pop("results", None)
-elif submitted:
-    with st.spinner("Finding hidden opportunities..."):
-        profile = {
-            "target_roles": list(target_roles),
-            "experience_level": experience_level,
-            "skills": split_csv(skills_text),
-            "industries": split_csv(industries_text),
-            "location": location.strip(),
-        }
-        results = rank_hidden_opportunities(
-            profile["target_roles"],
-            profile["skills"],
-            profile["industries"],
-            profile["location"],
-            experience_level=profile["experience_level"],
-        )
-        results = results.sort_values(
-            [
-                "Hidden_Opportunity_Score",
-                "Candidate_Fit_Score",
-                "Company_Name",
-                "Job_Title",
-            ],
-            ascending=[False, False, True, True],
-        )
-        st.session_state["results"] = results.reset_index(drop=True)
-        st.session_state["search_profile"] = profile
+    st.markdown('<p class="section-label">Your profile</p>', unsafe_allow_html=True)
 
-results = st.session_state.get("results")
-
-if results is None:
-    st.caption("Enter a profile, then find opportunities.")
-elif results.empty:
-    searched = st.session_state.get("search_profile", {})
-    roles = join_phrases(
-        [role_label(role) for role in searched.get("target_roles", [])]
-    )
-    st.info(
-        f"No current openings for {roles} reached a Candidate Fit of 40. "
-        "Try adding related roles, a different experience level, "
-        "or a broader location."
-    )
-else:
-    count = len(results)
-    label = "opportunity" if count == 1 else "opportunities"
-    st.markdown('<p class="section-label">Results</p>', unsafe_allow_html=True)
-    st.subheader(f"{count} matched {label}")
-
-    for position, row in enumerate(results.itertuples(index=False)):
-        with st.container(border=True):
-            info, score = st.columns([4.4, 1.35], vertical_alignment="center")
-            with info:
-                st.markdown(
-                    f'<p class="job-title">{html.escape(show_text(row.Job_Title))}</p>',
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    f'<p class="company-name">{html.escape(show_text(row.Company_Name))}</p>',
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    f'<p class="detail">{html.escape(show_text(row.Location))}'
-                    f" · {html.escape(show_text(row.Industry))}</p>",
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    f"""
-                    <div class="score-row">
-                        <div class="chip">
-                            <span class="chip-label">Candidate Fit</span>
-                            <span class="chip-value">{row.Candidate_Fit_Score:.1f}</span>
-                        </div>
-                        <div class="chip">
-                            <span class="chip-label">Hiring Momentum</span>
-                            <span class="chip-value">{row.Hiring_Momentum_Score:.1f}</span>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                job_url = show_text(row.Job_URL)
-                if job_url != "—":
-                    st.link_button("View Job", job_url)
-            with score:
-                st.markdown(
-                    f"""
-                    <div class="score-panel">
-                        <p class="score-label">Hidden Opportunity</p>
-                        <p class="score-value">{row.Hidden_Opportunity_Score:.1f}</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            explanation = explain_opportunity(
-                results.iloc[position],
-                st.session_state.get("search_profile", {}),
+    with st.form("profile"):
+        left, right = st.columns(2)
+        with left:
+            target_roles = st.multiselect(
+                "Target Roles",
+                options=candidate_fit.supported_roles(),
+                default=DEFAULT_ROLES,
+                format_func=role_label,
+                placeholder="Choose one or more roles",
+                help="HiddenHire can match these roles. Similar roles in "
+                "the same family are included automatically.",
             )
-            st.markdown(
-                '<p class="why-label">Why this opportunity?</p>'
-                f'<p class="why-copy">{html.escape(explanation)}</p>',
-                unsafe_allow_html=True,
+            experience_level = st.selectbox(
+                "Experience Level",
+                options=list(EXPERIENCE_OPTIONS),
+                format_func=EXPERIENCE_OPTIONS.get,
+                help="Postings at your level score highest on seniority.",
             )
+            skills_text = st.text_input(
+                "Skills",
+                value="SQL, Excel, Tableau, Python",
+                help="Separate skills with commas.",
+            )
+        with right:
+            industries_text = st.text_input(
+                "Preferred Industries",
+                value="fintech, AI, enterprise software",
+                help="Separate industries with commas.",
+            )
+            location = st.text_input(
+                "Preferred Location",
+                value="New York",
+            )
+        submitted = st.form_submit_button(
+            "Find Hidden Opportunities",
+            type="primary",
+        )
+
+    if submitted and not target_roles:
+        st.warning("Choose at least one target role.")
+        st.session_state.pop("results", None)
+    elif submitted:
+        with st.spinner("Finding hidden opportunities..."):
+            profile = {
+                "target_roles": list(target_roles),
+                "experience_level": experience_level,
+                "skills": split_csv(skills_text),
+                "industries": split_csv(industries_text),
+                "location": location.strip(),
+            }
+            results = rank_hidden_opportunities(
+                profile["target_roles"],
+                profile["skills"],
+                profile["industries"],
+                profile["location"],
+                experience_level=profile["experience_level"],
+            )
+            results = results.sort_values(
+                [
+                    "Hidden_Opportunity_Score",
+                    "Candidate_Fit_Score",
+                    "Company_Name",
+                    "Job_Title",
+                ],
+                ascending=[False, False, True, True],
+            )
+            st.session_state["results"] = results.reset_index(drop=True)
+            st.session_state["search_profile"] = profile
+
+    results = st.session_state.get("results")
+
+    if results is None:
+        st.caption("Enter a profile, then find opportunities.")
+    elif results.empty:
+        searched = st.session_state.get("search_profile", {})
+        roles = join_phrases(
+            [role_label(role) for role in searched.get("target_roles", [])]
+        )
+        st.info(
+            f"No current openings for {roles} reached a Candidate Fit of 40. "
+            "Try adding related roles, a different experience level, "
+            "or a broader location."
+        )
+    else:
+        count = len(results)
+        label = "opportunity" if count == 1 else "opportunities"
+        st.markdown('<p class="section-label">Results</p>', unsafe_allow_html=True)
+        st.subheader(f"{count} matched {label}")
+
+        for position, row in enumerate(results.itertuples(index=False)):
+            with st.container(border=True):
+                info, score = st.columns([4.4, 1.35], vertical_alignment="center")
+                with info:
+                    st.markdown(
+                        f'<p class="job-title">{html.escape(show_text(row.Job_Title))}</p>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f'<p class="company-name">{html.escape(show_text(row.Company_Name))}</p>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f'<p class="detail">{html.escape(show_text(row.Location))}'
+                        f" · {html.escape(show_text(row.Industry))}</p>",
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f"""
+                        <div class="score-row">
+                            <div class="chip">
+                                <span class="chip-label">Candidate Fit</span>
+                                <span class="chip-value">{row.Candidate_Fit_Score:.1f}</span>
+                            </div>
+                            <div class="chip">
+                                <span class="chip-label">Hiring Momentum</span>
+                                <span class="chip-value">{row.Hiring_Momentum_Score:.1f}</span>
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    job_url = show_text(row.Job_URL)
+                    if job_url != "—":
+                        st.link_button("View Job", job_url)
+                with score:
+                    st.markdown(
+                        f"""
+                        <div class="score-panel">
+                            <p class="score-label">Hidden Opportunity</p>
+                            <p class="score-value">{row.Hidden_Opportunity_Score:.1f}</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                explanation = explain_opportunity(
+                    results.iloc[position],
+                    st.session_state.get("search_profile", {}),
+                )
+                st.markdown(
+                    '<p class="why-label">Why this opportunity?</p>'
+                    f'<p class="why-copy">{html.escape(explanation)}</p>',
+                    unsafe_allow_html=True,
+                )
+
+with market_tab:
+    render_market_insights(market_data)
