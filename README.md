@@ -34,6 +34,7 @@ Candidate Profile → Job Data Collection → Candidate Fit → Hiring Momentum 
 - Direct links to original job postings
 - Historical job snapshots stored by date
 - Automated weekly job-data collection
+- Market Insights tab: open, new, and closed roles this week, the fastest-growing and slowing companies, open roles by job function and industry, and open roles over time
 
 ## Data Pipeline
 
@@ -89,6 +90,8 @@ Each signal is measured relative to the company's size (its open jobs a week ear
 
 **Hidden Opportunity** ranks each job as 60% Candidate Fit and 40% Hiring Momentum.
 
+**Market Insights** uses the same weekly snapshots and comparison window as Hiring Momentum. Job functions are assigned from titles by keyword (`market_insights.py`), so a small share of postings land in "Other". Industry counts use each company's industry tags, and a company with several tags counts toward each one.
+
 The explanation under each result uses only signals those scores already support, such as role match, skills, industry, location, and whether hiring momentum is elevated, steady, or quieter.
 
 ## Tech Stack
@@ -122,7 +125,6 @@ HiddenHire is an independently developed MVP and portfolio project. It is active
 
 ## Future Development
 
-- Market insights: which companies and job functions are growing or slowing week over week
 - Check whether high-momentum companies keep hiring in the following weeks
 - Highlight roles that newly appear between historical snapshots
 - Collect from additional applicant-tracking systems
