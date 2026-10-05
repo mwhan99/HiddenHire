@@ -512,6 +512,12 @@ def movers_table(movers):
     })
 
 
+def full_height(rows):
+    """Pixel height that shows every row of an st.dataframe without
+    an inner scrollbar (about 35px per row plus the header)."""
+    return 35 * (rows + 1) + 3
+
+
 def breakdown_table(table, label_column, label):
     return pd.DataFrame({
         label: table[label_column],
@@ -576,6 +582,7 @@ def render_market_insights(data):
     st.dataframe(
         breakdown_table(functions, "Function", "Function"),
         hide_index=True,
+        height=full_height(len(functions)),
         column_config={
             "Open roles": st.column_config.ProgressColumn(
                 "Open roles",
@@ -593,6 +600,7 @@ def render_market_insights(data):
     st.dataframe(
         breakdown_table(industries, "Industry", "Industry"),
         hide_index=True,
+        height=full_height(len(industries)),
         column_config={
             "Open roles": st.column_config.ProgressColumn(
                 "Open roles",
