@@ -365,10 +365,133 @@ def open_roles_over_time(jobs):
     return trend.reset_index(drop=True)
 
 
+# ==========================================
+# COMPANY MOMENTUM
+# ==========================================
+
+# Size-adjusted weekly growth (see size_adjusted) that counts as a clear
+# move rather than normal posting churn.
+MOMENTUM_THRESHOLD = 0.05
+
+GROWING = "Growing"
+STEADY = "Steady"
+SLOWING = "Slowing"
+NEW_TO_TRACKING = "New to tracking"
+
+
+def momentum_label(growth_rate):
+    """Growing / Steady / Slowing from a size-adjusted growth rate."""
+    if growth_rate is None or pd.isna(growth_rate):
+        return NEW_TO_TRACKING
+    if growth_rate >= MOMENTUM_THRESHOLD:
+        return GROWING
+    if growth_rate <= -MOMENTUM_THRESHOLD:
+        return SLOWING
+    return STEADY
+
+
+def company_trends(jobs):
+    """Open roles per company at every snapshot, oldest first.
+
+    Returns a Series of lists keyed by Company_ID. A company that was
+    not collected yet on a date counts as 0 on that date.
+    """
+    counts = (
+        jobs.groupby(["Company_ID", "Snapshot_Date"])["Job_Key"]
+        .nunique()
+        .unstack(fill_value=0)
+        .sort_index(axis=1)
+    )
+    return counts.apply(lambda row: [int(value) for value in row], axis=1)
+
+
+def company_momentum(jobs, companies):
+    """One row per company open in the latest snapshot, for the
+    Company Momentum leaderboard.
+
+    Weekly change columns come from company_movers. Companies with no
+    roles in the comparison snapshot have no change and are labeled
+    "New to tracking".
+    """
+    latest = _snapshot(jobs, jobs["Snapshot_Date"].max())
+    names = (
+        jobs.sort_values("Snapshot_Date")
+        .groupby("Company_ID")["Company_Name"].last()
+    )
+    open_now = latest.groupby("Company_ID")["Job_Key"].nunique()
+
+    table = pd.DataFrame({
+        "Company_ID": open_now.index,
+        "Company": open_now.index.map(names),
+        "Open_Now": open_now.values,
+    })
+
+    info = companies.copy()
+    info["Company_ID"] = info["Company_ID"].astype(str)
+    info = info.set_index("Company_ID")
+    for column in ["Industry", "Company_Stage", "Company_Size", "Company_Website"]:
+        table[column] = (
+            table["Company_ID"].map(info[column]) if column in info else None
+        )
+
+    movers = company_movers(jobs).set_index("Company_ID")
+    for column in ["Net_Change", "New_Roles", "Closed_Roles", "Growth_Rate"]:
+        table[column] = table["Company_ID"].map(movers[column])
+
+    table["Momentum"] = table["Growth_Rate"].map(momentum_label)
+    trends = company_trends(jobs)
+    table["Trend"] = table["Company_ID"].map(trends)
+
+    return table.sort_values(
+        ["Growth_Rate", "Open_Now", "Company"],
+        ascending=[False, False, True],
+        na_position="last",
+    ).reset_index(drop=True)
+
+
+def company_new_roles(jobs, company_id):
+    """Postings at one company that are open now but were not open in
+    the comparison snapshot. Empty when there is only one snapshot."""
+    window = comparison_window(jobs)
+    columns = ["Job_Title", "Location", "Job_URL"]
+    if window is None:
+        return pd.DataFrame(columns=columns)
+
+    previous_date, current_date, _ = window
+    company_id = str(company_id)
+    previous = _snapshot(jobs, previous_date)
+    current = _snapshot(jobs, current_date)
+    current = current[current["Company_ID"] == company_id]
+    before = set(previous.loc[previous["Company_ID"] == company_id, "Job_Key"])
+
+    new = current[~current["Job_Key"].isin(before)]
+    for column in columns:
+        if column not in new:
+            new = new.assign(**{column: None})
+    return new.sort_values("Job_Title")[columns].reset_index(drop=True)
+
+
+def company_functions(jobs, company_id):
+    """Open roles by job function at one company in the latest snapshot."""
+    latest = _snapshot(jobs, jobs["Snapshot_Date"].max())
+    titles = latest.loc[latest["Company_ID"] == str(company_id), "Job_Title"]
+    counts = titles.map(classify_function).value_counts()
+    return (
+        counts.rename_axis("Function").reset_index(name="Open_Now")
+        .sort_values(["Open_Now", "Function"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+
+
 __all__ = [
     "MIN_GAP_DAYS",
     "classify_function",
+    "company_functions",
+    "company_momentum",
     "company_movers",
+    "company_new_roles",
+    "company_trends",
+    "momentum_label",
     "comparison_window",
     "fastest_growing",
     "headline",

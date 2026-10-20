@@ -138,3 +138,40 @@ def test_single_snapshot_has_no_comparison():
     assert mi.comparison_window(only_latest) is None
     assert mi.headline(only_latest)["new_roles"] is None
     assert mi.company_movers(only_latest, companies).empty
+
+
+def test_momentum_label():
+    assert mi.momentum_label(0.4) == mi.GROWING
+    assert mi.momentum_label(0.0) == mi.STEADY
+    assert mi.momentum_label(-0.25) == mi.SLOWING
+    assert mi.momentum_label(float("nan")) == mi.NEW_TO_TRACKING
+
+
+def test_company_momentum_leaderboard():
+    jobs, companies = _history()
+    board = mi.company_momentum(jobs, companies).set_index("Company_ID")
+
+    # A grew 10 -> 14 and ranks first; D is new and ranks last.
+    assert list(board.index) == ["A", "C", "B", "D"]
+    assert board.loc["A", "Net_Change"] == 4
+    assert board.loc["A", "New_Roles"] == 6
+    assert board.loc["A", "Momentum"] == mi.GROWING
+    assert board.loc["B", "Momentum"] == mi.SLOWING
+    assert board.loc["C", "Momentum"] == mi.STEADY
+    assert board.loc["D", "Momentum"] == mi.NEW_TO_TRACKING
+    assert board.loc["A", "Industry"] == "AI / FinTech"
+
+    # One point per snapshot date; D was not collected until week 2.
+    assert board.loc["A", "Trend"] == [10, 10, 14]
+    assert board.loc["D", "Trend"] == [0, 0, 10]
+
+
+def test_company_new_roles_and_functions():
+    jobs, _ = _history()
+    new = mi.company_new_roles(jobs, "A")
+    assert len(new) == 6
+
+    functions = mi.company_functions(jobs, "B")
+    assert functions.to_dict("records") == [
+        {"Function": "Sales & Partnerships", "Open_Now": 15}
+    ]
