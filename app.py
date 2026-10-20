@@ -53,31 +53,25 @@ st.markdown(
         }
         .tagline {
             color: #1e465c;
-            font-size: 1.28rem;
+            font-size: 1.28rem !important;
             font-weight: 600;
             letter-spacing: -0.02em;
-            margin: 0 0 0.45rem 0;
-        }
-        .lead {
-            color: #243847;
-            font-size: 1.05rem;
-            line-height: 1.55;
             margin: 0 0 0.35rem 0;
         }
-        .description {
-            color: #5c6d7a;
-            font-size: 0.98rem;
+        .lead {
+            color: #4d5f6c;
+            font-size: 1.02rem !important;
             line-height: 1.55;
-            margin: 0 0 1rem 0;
+            margin: 0;
         }
         .data-line {
             color: #5c6d7a;
-            font-size: 0.88rem;
+            font-size: 0.85rem !important;
             margin: 0 0 1rem 0;
         }
         .section-label {
             color: #5c6d7a;
-            font-size: 0.75rem;
+            font-size: 0.75rem !important;
             font-weight: 650;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -151,7 +145,8 @@ st.markdown(
         .method-copy {
             color: #4d5f6c;
         }
-        div[data-testid="stVerticalBlockBorderWrapper"] {
+        div[data-testid="stVerticalBlockBorderWrapper"],
+        div[class*="st-key-card"] {
             background: #ffffff;
             border: 1px solid #e3e8ee !important;
             border-radius: 16px !important;
@@ -159,14 +154,14 @@ st.markdown(
         }
         .job-title {
             color: #12202c;
-            font-size: 1.18rem;
+            font-size: 1.18rem !important;
             font-weight: 680;
             letter-spacing: -0.02em;
             margin: 0;
         }
         .company-name {
             color: #0e4c5c;
-            font-size: 0.98rem;
+            font-size: 0.98rem !important;
             font-weight: 600;
             margin: 0.2rem 0 0.15rem 0;
         }
@@ -176,62 +171,36 @@ st.markdown(
         }
         .why-label {
             color: #5c6d7a;
-            font-size: 0.75rem;
+            font-size: 0.75rem !important;
             font-weight: 650;
             letter-spacing: 0.04em;
-            margin: 0.95rem 0 0.28rem 0;
+            margin: 0.95rem 0 0.28rem 0 !important;
         }
         .why-copy {
             color: #243847;
-            font-size: 0.95rem;
+            font-size: 0.95rem !important;
             line-height: 1.5;
             margin: 0;
-        }
-        .score-row {
-            display: flex;
-            gap: 0.55rem;
-            margin-top: 0.85rem;
-        }
-        .chip {
-            background: #f5f8fa;
-            border: 1px solid #e3e8ee;
-            border-radius: 12px;
-            min-width: 8.4rem;
-            padding: 0.42rem 0.7rem 0.38rem;
-        }
-        .chip-label {
-            display: block;
-            color: #667886;
-            font-size: 0.68rem;
-            font-weight: 650;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-        .chip-value {
-            display: block;
-            color: #173042;
-            font-size: 1.12rem;
-            font-weight: 720;
-            margin-top: 0.05rem;
         }
         .score-panel {
             background: #f3f8fa;
             border: 1px solid #d7e7ee;
             border-radius: 14px;
-            padding: 0.7rem 0.55rem 0.65rem;
+            padding: 0.75rem 0.5rem 0.7rem;
             text-align: center;
         }
         .score-label {
             color: #5d7684;
-            font-size: 0.68rem;
+            font-size: 0.68rem !important;
             font-weight: 700;
             letter-spacing: 0.06em;
             text-transform: uppercase;
+            white-space: nowrap;
             margin: 0;
         }
         .score-value {
             color: #0e4c5c;
-            font-size: 2.15rem;
+            font-size: 2.4rem !important;
             font-weight: 740;
             letter-spacing: -0.04em;
             line-height: 1;
@@ -252,6 +221,114 @@ st.markdown(
         }
         div[data-testid="stLinkButton"] {
             margin-top: 0.85rem;
+        }
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.7rem;
+            margin: 1.1rem 0 0.5rem 0;
+        }
+        @media (max-width: 720px) {
+            .stats-bar {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        .stat {
+            background: #ffffff;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            padding: 0.8rem 0.95rem 0.75rem;
+            box-shadow: 0 6px 18px rgba(18, 32, 44, 0.03);
+            min-width: 0;
+        }
+        .stat-label {
+            display: block;
+            color: #667886;
+            font-size: 0.7rem !important;
+            font-weight: 650;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .stat-value {
+            display: block;
+            color: #12202c;
+            font-size: 1.6rem !important;
+            font-weight: 720;
+            letter-spacing: -0.03em;
+            line-height: 1.15;
+            margin-top: 0.2rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .stat-note {
+            display: block;
+            color: #5c6d7a;
+            font-size: 0.8rem !important;
+            margin-top: 0.1rem;
+        }
+        .up {
+            color: #1d7a4f;
+            font-weight: 650;
+        }
+        .down {
+            color: #b0412e;
+            font-weight: 650;
+        }
+        .badge {
+            display: inline-block;
+            border-radius: 999px;
+            font-size: 0.78rem !important;
+            font-weight: 650;
+            padding: 0.18rem 0.65rem;
+            border: 1px solid transparent;
+        }
+        .badge-growing {
+            background: #e6f4ec;
+            color: #1d6b45;
+            border-color: #c6e6d3;
+        }
+        .badge-steady {
+            background: #eef3f7;
+            color: #3b5566;
+            border-color: #dbe5ec;
+        }
+        .badge-slowing {
+            background: #fbeeea;
+            color: #9a3a29;
+            border-color: #f1d3cb;
+        }
+        .badge-new {
+            background: #f1eefa;
+            color: #4f3f8f;
+            border-color: #ddd6f2;
+        }
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.45rem;
+            margin-top: 0.7rem;
+        }
+        .more-role {
+            color: #243847;
+            margin: 0.2rem 0;
+        }
+        .more-role a {
+            color: #0e4c5c;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .more-role span {
+            color: #667886;
+            font-size: 0.85rem !important;
+        }
+        .company-header {
+            color: #12202c;
+            font-size: 1.35rem !important;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin: 0;
         }
     </style>
     """,
@@ -487,6 +564,8 @@ def load_market_data(file_mtime):
     jobs, companies = market_insights.load_history(FILE_PATH)
     movers = market_insights.company_movers(jobs, companies)
     return {
+        "jobs": jobs,
+        "board": market_insights.company_momentum(jobs, companies),
         "headline": market_insights.headline(jobs),
         "growing": market_insights.fastest_growing(movers),
         "slowing": market_insights.slowing_down(movers),
@@ -540,21 +619,10 @@ def render_market_insights(data):
     )
     st.caption(
         f"Comparing {format_date(summary['latest_date'])} with "
-        f"{previous_label} ({summary['gap_days']} days apart)."
-    )
-
-    open_col, new_col, closed_col, movers_col = st.columns(4)
-    open_col.metric(
-        "Open roles",
-        f"{summary['open_roles']:,}",
-        delta=f"{summary['open_roles'] - summary['previous_open_roles']:+,} vs last week",
-    )
-    new_col.metric("New postings", f"{summary['new_roles']:,}")
-    closed_col.metric("Closed postings", f"{summary['closed_roles']:,}")
-    movers_col.metric(
-        "Growing / slowing",
-        f"{summary['companies_growing']} / {summary['companies_slowing']}",
-        help="Companies with more / fewer open roles than last week.",
+        f"{previous_label} ({summary['gap_days']} days apart). "
+        f"{summary['closed_roles']:,} postings closed; "
+        f"{summary['companies_growing']} companies grew and "
+        f"{summary['companies_slowing']} slowed."
     )
 
     st.markdown('<p class="section-label">Fastest-growing companies</p>',
@@ -628,32 +696,242 @@ def render_market_insights(data):
     )
 
 
+BADGE_CLASSES = {
+    market_insights.GROWING: "badge-growing",
+    market_insights.STEADY: "badge-steady",
+    market_insights.SLOWING: "badge-slowing",
+    market_insights.NEW_TO_TRACKING: "badge-new",
+}
+
+BADGE_ICONS = {
+    market_insights.GROWING: "▲",
+    market_insights.STEADY: "●",
+    market_insights.SLOWING: "▼",
+    market_insights.NEW_TO_TRACKING: "✦",
+}
+
+
+def badge(text, css_class, title=""):
+    title_attr = f' title="{html.escape(title)}"' if title else ""
+    return f'<span class="badge {css_class}"{title_attr}>{html.escape(text)}</span>'
+
+
+def momentum_badge(label):
+    return badge(f"{BADGE_ICONS[label]} {label}", BADGE_CLASSES[label])
+
+
+def search_momentum_badge(score):
+    """Badge for the role-relevant Hiring Momentum score on a result.
+    Uses the same bands as the explanation text."""
+    if score is None or pd.isna(score):
+        return badge("Momentum n/a", "badge-steady")
+    title = f"Hiring Momentum {score:.1f} / 100"
+    if score >= 60:
+        return badge("▲ Hiring fast", "badge-growing", title)
+    if score >= 45:
+        return badge("● Steady hiring", "badge-steady", title)
+    return badge("▼ Quieter hiring", "badge-slowing", title)
+
+
+def change_class(value):
+    return "up" if value > 0 else "down" if value < 0 else ""
+
+
+def render_stats_bar(data):
+    summary = data["headline"]
+    tiles = [
+        ("Companies tracked", f"{summary['companies']}", "NYC startups, refreshed weekly"),
+    ]
+    if summary["previous_date"] is None:
+        tiles += [
+            ("Open roles", f"{summary['open_roles']:,}", "First snapshot"),
+            ("New this week", "—", "Needs two snapshots"),
+            ("Biggest jump", "—", "Needs two snapshots"),
+        ]
+    else:
+        delta = summary["open_roles"] - summary["previous_open_roles"]
+        tiles.append((
+            "Open roles",
+            f"{summary['open_roles']:,}",
+            f'<span class="{change_class(delta)}">{delta:+,}</span> vs last week',
+        ))
+        tiles.append((
+            "New this week",
+            f"{summary['new_roles']:,}",
+            f"{summary['closed_roles']:,} closed",
+        ))
+        # The headline tile uses the raw jump in open roles; the
+        # leaderboard below ranks by size-adjusted growth instead.
+        growing = data["board"][data["board"]["Net_Change"] > 0]
+        if growing.empty:
+            tiles.append(("Biggest jump", "—", "No company grew this week"))
+        else:
+            top = growing.sort_values("Net_Change", ascending=False).iloc[0]
+            tiles.append((
+                "Biggest jump",
+                html.escape(str(top["Company"])),
+                f'<span class="up">{int(top["Net_Change"]):+d}</span> open roles',
+            ))
+
+    cells = "".join(
+        f'<div class="stat"><span class="stat-label">{label}</span>'
+        f'<span class="stat-value">{value}</span>'
+        f'<span class="stat-note">{note}</span></div>'
+        for label, value, note in tiles
+    )
+    st.markdown(f'<div class="stats-bar">{cells}</div>', unsafe_allow_html=True)
+    first_date = data["trend"]["Snapshot_Date"].min()
+    st.markdown(
+        f'<p class="data-line">Updated {format_date(summary["latest_date"])}'
+        f" · weekly snapshots since {format_date(first_date)}</p>",
+        unsafe_allow_html=True,
+    )
+
+
+def change_text(value):
+    return "—" if value is None or pd.isna(value) else signed(value)
+
+
+def render_company_momentum(data):
+    board = data["board"]
+    st.markdown('<p class="section-label">Who\'s hiring now</p>',
+                unsafe_allow_html=True)
+    st.caption(
+        "Every tracked company with open roles, ranked by week-over-week growth "
+        "relative to company size. The trend shows open roles at each weekly snapshot."
+    )
+
+    choice = st.segmented_control(
+        "Show",
+        options=["All"] + list(BADGE_CLASSES),
+        default="All",
+        label_visibility="collapsed",
+    )
+    shown = board if choice in (None, "All") else board[board["Momentum"] == choice]
+    if shown.empty:
+        st.caption("No companies in this group this week.")
+    else:
+        st.dataframe(
+            pd.DataFrame({
+                "Company": shown["Company"],
+                "Momentum": shown["Momentum"].map(
+                    lambda label: f"{BADGE_ICONS[label]} {label}"
+                ),
+                "Open roles": shown["Open_Now"].astype(int),
+                "Week change": shown["Net_Change"].map(change_text),
+                "New": shown["New_Roles"].map(
+                    lambda value: "—" if pd.isna(value) else int(value)
+                ),
+                "Stage": shown["Company_Stage"].fillna("—"),
+                "Trend": shown["Trend"],
+            }),
+            hide_index=True,
+            height=min(full_height(len(shown)), 520),
+            column_config={
+                "Trend": st.column_config.LineChartColumn(
+                    "Open roles trend", width="medium", y_min=0,
+                ),
+            },
+        )
+
+    st.markdown('<p class="section-label">Company detail</p>',
+                unsafe_allow_html=True)
+    company = st.selectbox(
+        "Company",
+        options=board["Company"].tolist(),
+        label_visibility="collapsed",
+    )
+    if company is None:
+        return
+    row = board[board["Company"] == company].iloc[0]
+
+    with st.container(border=True, key="card-company"):
+        name_col, link_col = st.columns([4, 1.2], vertical_alignment="center")
+        with name_col:
+            facts = " · ".join(
+                html.escape(str(value)) for value in
+                [row["Company_Stage"], row["Company_Size"], short_industry(row["Industry"])]
+                if value is not None and not pd.isna(value) and str(value).strip()
+            )
+            st.markdown(
+                f'<p class="company-header">{html.escape(company)}</p>'
+                f'<p class="detail">{facts}</p>'
+                f'<div class="badge-row">{momentum_badge(row["Momentum"])}</div>',
+                unsafe_allow_html=True,
+            )
+        with link_col:
+            website = row["Company_Website"]
+            if isinstance(website, str) and website.startswith("http"):
+                st.link_button("Website", website.split("?")[0])
+
+        open_col, change_col, new_col = st.columns(3)
+        open_col.metric("Open roles", f"{int(row['Open_Now']):,}")
+        change_col.metric("Week change", change_text(row["Net_Change"]))
+        new_col.metric(
+            "New this week",
+            "—" if pd.isna(row["New_Roles"]) else f"{int(row['New_Roles'])}",
+        )
+
+        dates = data["trend"]["Snapshot_Date"]
+        st.line_chart(
+            pd.Series(row["Trend"], index=dates, name="Open roles"),
+            height=200,
+        )
+
+        functions = market_insights.company_functions(data["jobs"], row["Company_ID"])
+        if not functions.empty:
+            st.dataframe(
+                functions.rename(columns={"Open_Now": "Open roles"}),
+                hide_index=True,
+                height=full_height(len(functions)),
+                column_config={
+                    "Open roles": st.column_config.ProgressColumn(
+                        "Open roles",
+                        format="%d",
+                        min_value=0,
+                        max_value=int(functions["Open_Now"].max()),
+                    ),
+                },
+            )
+
+        new_roles = market_insights.company_new_roles(data["jobs"], row["Company_ID"])
+        if not new_roles.empty:
+            st.markdown('<p class="why-label">New postings this week</p>',
+                        unsafe_allow_html=True)
+            lines = []
+            for role in new_roles.head(10).itertuples(index=False):
+                title = html.escape(show_text(role.Job_Title))
+                url = show_text(role.Job_URL)
+                link = (
+                    f'<a href="{html.escape(url)}" target="_blank">{title}</a>'
+                    if url.startswith("http") else title
+                )
+                lines.append(
+                    f'<p class="more-role">{link} '
+                    f"<span>· {html.escape(show_text(role.Location))}</span></p>"
+                )
+            if len(new_roles) > 10:
+                lines.append(
+                    f'<p class="more-role"><span>+{len(new_roles) - 10} more</span></p>'
+                )
+            st.markdown("".join(lines), unsafe_allow_html=True)
+
+
 st.markdown("# HiddenHire")
 st.markdown(
-    '<p class="tagline">Discover emerging companies hiring for you.</p>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    '<p class="lead">Discover overlooked opportunities by combining your '
-    "candidate fit with real hiring momentum.</p>",
-    unsafe_allow_html=True,
-)
-st.markdown(
-    '<p class="description">HiddenHire combines candidate fit with real hiring '
-    "momentum to surface opportunities you might otherwise miss.</p>",
+    '<p class="tagline">Find the NYC startups hiring for you, before everyone else does.</p>'
+    '<p class="lead">HiddenHire tracks the career pages of emerging New York '
+    "startups every week and ranks openings by your fit and each company's "
+    "hiring momentum.</p>",
     unsafe_allow_html=True,
 )
 
 market_data = load_market_data(os.path.getmtime(FILE_PATH))
-market_summary = market_data["headline"]
-st.markdown(
-    f'<p class="data-line">Data updated {format_date(market_summary["latest_date"])}'
-    f' · {market_summary["companies"]} companies'
-    f' · {market_summary["open_roles"]:,} open roles</p>',
-    unsafe_allow_html=True,
-)
+render_stats_bar(market_data)
 
-search_tab, market_tab = st.tabs(["Find Opportunities", "Market Insights"])
+search_tab, company_tab, market_tab = st.tabs(
+    ["Find Opportunities", "Company Momentum", "Market Insights"]
+)
 
 with search_tab:
     with st.expander("How the scores work"):
@@ -762,57 +1040,47 @@ with search_tab:
         )
     else:
         count = len(results)
-        label = "opportunity" if count == 1 else "opportunities"
+        label = "role" if count == 1 else "roles"
+        # Results are already ranked, so each company's first row is its
+        # best match. One card per company keeps near-duplicate postings
+        # (e.g. the same title for several teams) from filling the page.
+        groups = list(results.groupby("Company_Name", sort=False))
+        companies_label = "company" if len(groups) == 1 else "companies"
         st.markdown('<p class="section-label">Results</p>', unsafe_allow_html=True)
-        st.subheader(f"{count} matched {label}")
+        st.subheader(f"{count} matched {label} at {len(groups)} {companies_label}")
 
-        for position, row in enumerate(results.itertuples(index=False)):
-            with st.container(border=True):
+        for index, (company_name, group) in enumerate(groups):
+            row = group.iloc[0]
+            with st.container(border=True, key=f"card-result-{index}"):
                 info, score = st.columns([4.4, 1.35], vertical_alignment="center")
                 with info:
                     st.markdown(
-                        f'<p class="job-title">{html.escape(show_text(row.Job_Title))}</p>',
+                        f'<p class="job-title">{html.escape(show_text(row["Job_Title"]))}</p>'
+                        f'<p class="company-name">{html.escape(show_text(company_name))}</p>'
+                        f'<p class="detail">{html.escape(show_text(row["Location"]))}'
+                        f' · {html.escape(short_industry(row["Industry"]) or "—")}</p>'
+                        '<div class="badge-row">'
+                        + badge(
+                            f"Fit {row['Candidate_Fit_Score']:.0f}",
+                            "badge-steady",
+                            "Candidate Fit: how well this role matches your profile (0-100).",
+                        )
+                        + search_momentum_badge(row["Hiring_Momentum_Score"])
+                        + "</div>",
                         unsafe_allow_html=True,
                     )
-                    st.markdown(
-                        f'<p class="company-name">{html.escape(show_text(row.Company_Name))}</p>',
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown(
-                        f'<p class="detail">{html.escape(show_text(row.Location))}'
-                        f" · {html.escape(show_text(row.Industry))}</p>",
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown(
-                        f"""
-                        <div class="score-row">
-                            <div class="chip">
-                                <span class="chip-label">Candidate Fit</span>
-                                <span class="chip-value">{row.Candidate_Fit_Score:.1f}</span>
-                            </div>
-                            <div class="chip">
-                                <span class="chip-label">Hiring Momentum</span>
-                                <span class="chip-value">{row.Hiring_Momentum_Score:.1f}</span>
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    job_url = show_text(row.Job_URL)
-                    if job_url != "—":
-                        st.link_button("View Job", job_url)
                 with score:
                     st.markdown(
                         f"""
                         <div class="score-panel">
-                            <p class="score-label">Hidden Opportunity</p>
-                            <p class="score-value">{row.Hidden_Opportunity_Score:.1f}</p>
+                            <p class="score-label">Opportunity</p>
+                            <p class="score-value">{row["Hidden_Opportunity_Score"]:.0f}</p>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
                 explanation = explain_opportunity(
-                    results.iloc[position],
+                    row,
                     st.session_state.get("search_profile", {}),
                 )
                 st.markdown(
@@ -820,6 +1088,33 @@ with search_tab:
                     f'<p class="why-copy">{html.escape(explanation)}</p>',
                     unsafe_allow_html=True,
                 )
+                job_url = show_text(row["Job_URL"])
+                if job_url != "—":
+                    st.link_button("View job", job_url)
+
+                others = group.iloc[1:]
+                if not others.empty:
+                    noun = "role" if len(others) == 1 else "roles"
+                    with st.expander(
+                        f"{len(others)} more matching {noun} at {company_name}"
+                    ):
+                        lines = []
+                        for other in others.itertuples(index=False):
+                            title = html.escape(show_text(other.Job_Title))
+                            url = show_text(other.Job_URL)
+                            link = (
+                                f'<a href="{html.escape(url)}" target="_blank">{title}</a>'
+                                if url.startswith("http") else title
+                            )
+                            lines.append(
+                                f'<p class="more-role">{link} <span>· Opportunity '
+                                f"{other.Hidden_Opportunity_Score:.0f} · "
+                                f"{html.escape(show_text(other.Location))}</span></p>"
+                            )
+                        st.markdown("".join(lines), unsafe_allow_html=True)
+
+with company_tab:
+    render_company_momentum(market_data)
 
 with market_tab:
     render_market_insights(market_data)
