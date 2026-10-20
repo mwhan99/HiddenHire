@@ -2,6 +2,10 @@
 
 Discover emerging job opportunities through candidate fit and company hiring momentum.
 
+**[Try HiddenHire Live →](https://hiddenhire.streamlit.app/)**
+
+![HiddenHire search results with the weekly stats bar](hiddenhire-results.png)
+
 ## Overview
 
 HiddenHire is an MVP hiring-signal discovery platform. It helps job seekers find roles at emerging and lesser-known companies, instead of limiting a search to well-known employers or keyword matches alone.
@@ -26,12 +30,15 @@ Candidate Profile → Job Data Collection → Candidate Fit → Hiring Momentum 
 
 ## Core Features
 
+- Stats bar on every page: companies tracked, open roles and the change from last week, new postings this week, and the company with the biggest jump in open roles
 - Candidate-to-job matching against the latest job snapshot
 - Candidate Fit scoring
 - Company Hiring Momentum from prior snapshots
-- Hidden Opportunity ranking
+- Hidden Opportunity ranking, with one result card per company and its other matching roles listed underneath
+- Fit and momentum shown as badges (`Fit 80`, `▲ Hiring fast`, `● Steady hiring`, `▼ Quieter hiring`)
 - “Why this opportunity?” explanations based on the calculated signals
 - Direct links to original job postings
+- Company Momentum tab: every tracked company ranked by weekly growth, with a trend line of open roles across all snapshots, plus a company view with roles by function and the week's new postings
 - Historical job snapshots stored by date
 - Automated weekly job-data collection
 - Market Insights tab: open, new, and closed roles this week, the fastest-growing and slowing companies, open roles by job function and industry, and open roles over time
@@ -90,6 +97,8 @@ Each signal is measured relative to the company's size (its open jobs a week ear
 
 **Hidden Opportunity** ranks each job as 60% Candidate Fit and 40% Hiring Momentum.
 
+**Company Momentum** ranks companies by their net change in open roles relative to size, using the same size adjustment and comparison window as Hiring Momentum. It does not depend on a candidate's profile. A company is labeled Growing when that size-adjusted change is at least +5%, Slowing at −5% or lower, and Steady in between. A company with no roles in the comparison snapshot is labeled New to tracking. The "Biggest jump" figure in the stats bar is the largest raw increase in open roles, so it can name a different company than the top of the size-adjusted ranking.
+
 **Market Insights** uses the same weekly snapshots and comparison window as Hiring Momentum. Job functions are assigned from titles by keyword (`market_insights.py`), so a small share of postings land in "Other". Industry counts use each company's industry tags, and a company with several tags counts toward each one.
 
 The explanation under each result uses only signals those scores already support, such as role match, skills, industry, location, and whether hiring momentum is elevated, steady, or quieter.
@@ -119,14 +128,14 @@ HiddenHire is an independently developed MVP and portfolio project. It is active
 
 [Try HiddenHire Live](https://hiddenhire.streamlit.app/)
 
-## Screenshot
+## Company Momentum
 
-![HiddenHire results](hiddenhire-results.png)
+![Company Momentum leaderboard with weekly trend lines](hiddenhire-company-momentum.png)
 
 ## Future Development
 
 - Check whether high-momentum companies keep hiring in the following weeks
-- Highlight roles that newly appear between historical snapshots
+- Flag newly posted roles directly in search results (new postings are shown per company today)
 - Collect from additional applicant-tracking systems
 - Add international-student sponsorship signals
 
