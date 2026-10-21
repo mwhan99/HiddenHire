@@ -75,7 +75,7 @@ st.markdown(
             font-weight: 650;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            margin: 1.3rem 0 0.45rem 0;
+            margin: 1.6rem 0 0.5rem 0 !important;
         }
         div[data-testid="stForm"] {
             background: #ffffff;
@@ -323,6 +323,101 @@ st.markdown(
             color: #667886;
             font-size: 0.85rem !important;
         }
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.7rem;
+        }
+        .step {
+            background: #ffffff;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            padding: 0.85rem 0.9rem;
+        }
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 999px;
+            background: #0e4c5c;
+            color: #ffffff;
+            font-size: 0.78rem !important;
+            font-weight: 700;
+        }
+        .step-name {
+            display: block;
+            color: #12202c;
+            font-weight: 700;
+            margin: 0.45rem 0 0.2rem 0;
+        }
+        .step-copy {
+            display: block;
+            color: #4d5f6c;
+            font-size: 0.88rem !important;
+            line-height: 1.45;
+        }
+        .weight {
+            color: #0e4c5c;
+            font-weight: 650;
+            margin-left: 0.3rem;
+        }
+        .limits {
+            color: #243847;
+            margin: 0;
+            padding-left: 1.2rem;
+        }
+        .limits li {
+            font-size: 0.95rem !important;
+            margin: 0.2rem 0;
+        }
+        .footer {
+            border-top: 1px solid #e3e8ee;
+            color: #667886;
+            font-size: 0.82rem !important;
+            line-height: 1.6;
+            margin-top: 3rem;
+            padding-top: 1rem;
+        }
+        .footer a {
+            color: #0e4c5c;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        @media (max-width: 720px) {
+            .block-container {
+                padding-top: 1.5rem;
+            }
+            h1 {
+                font-size: 2.1rem !important;
+            }
+            .tagline {
+                font-size: 1.12rem !important;
+            }
+            .stat-value {
+                font-size: 1.25rem !important;
+            }
+            /* The score column stacks under the card text on phones, so
+               show it as a slim label-and-number bar instead of a tile. */
+            .score-panel {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.45rem 0.9rem;
+            }
+            .score-value {
+                font-size: 1.6rem !important;
+                margin: 0 !important;
+            }
+            .steps {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .method-row {
+                grid-template-columns: 1fr;
+                gap: 0.1rem;
+            }
+        }
         .company-header {
             color: #12202c;
             font-size: 1.35rem !important;
@@ -563,7 +658,13 @@ def load_market_data(file_mtime):
     the weekly update changes the workbook."""
     jobs, companies = market_insights.load_history(FILE_PATH)
     movers = market_insights.company_movers(jobs, companies)
+    curated = pd.read_excel(FILE_PATH, sheet_name="Companies")
     return {
+        "coverage": {
+            "curated": len(curated),
+            "active": len(companies),
+            "by_ats": companies["ATS"].value_counts().to_dict(),
+        },
         "jobs": jobs,
         "board": market_insights.company_momentum(jobs, companies),
         "headline": market_insights.headline(jobs),
@@ -917,6 +1018,146 @@ def render_company_momentum(data):
             st.markdown("".join(lines), unsafe_allow_html=True)
 
 
+REPO_URL = "https://github.com/mwhan99/HiddenHire"
+LINKEDIN_URL = "https://www.linkedin.com/in/meng-wen-han"
+
+PIPELINE_STEPS = [
+    ("Collect", "Every Monday, GitHub Actions pulls each company's public job "
+                "board from Ashby, Greenhouse, or Lever."),
+    ("Snapshot", "That day's openings are appended to a dated history, so "
+                 "postings can be compared week over week."),
+    ("Score", "Each opening gets a Candidate Fit score against your profile; "
+              "each company gets a Hiring Momentum score."),
+    ("Rank", "Openings are ranked 60% fit, 40% momentum, with a plain-language "
+             "reason and a link to the original posting."),
+]
+
+FIT_WEIGHTS = [
+    ("Title", "35%", "100 for an exact target role, 75 for another title in the same role family."),
+    ("Seniority", "25%", "Title classified as entry, mid, or senior and compared with your level."),
+    ("Skills", "20%", "Share of your skills found in the posting, matched as whole words."),
+    ("Industry", "10%", "Full credit when the company is in a preferred industry."),
+    ("Location", "10%", "Full credit for your location, partial credit for remote."),
+]
+
+MOMENTUM_WEIGHTS = [
+    ("New relevant roles", "40%", "Roles opened this week in your target role families."),
+    ("Net relevant change", "25%", "Change in open roles in those families."),
+    ("Overall growth", "20%", "Change in all open roles."),
+    ("New postings", "15%", "All roles opened this week."),
+]
+
+DATA_FIXES = [
+    ("Missing descriptions", "Greenhouse postings had no text, so over a quarter "
+     "of jobs scored 0 on skills. The collector now stores full descriptions."),
+    ("Substring matching", '"Excel" matched "excellent" and "intern" matched '
+     '"international". All matching is now whole-word.'),
+    ("One-day momentum", "A manual run one day after a scheduled one made momentum "
+     "compare a single day. It now uses the snapshot closest to 7 days earlier."),
+    ("Size bias", "Raw job counts made the largest employers look hottest. "
+     "Signals are now relative to company size."),
+]
+
+LIMITATIONS = [
+    "Results only cover the curated company list, not the whole market.",
+    "History starts in September 2026, so momentum is still noisy at small companies.",
+    "Matching is keyword-based: synonyms like \"BI\" vs. \"business intelligence\" are missed.",
+    "Seniority comes from job titles only, not \"3+ years\" requirements in descriptions.",
+]
+
+
+def weights_table(rows):
+    return "".join(
+        f'<div class="method-row"><div class="method-name">{html.escape(name)} '
+        f'<span class="weight">{weight}</span></div>'
+        f'<div class="method-copy">{html.escape(copy)}</div></div>'
+        for name, weight, copy in rows
+    )
+
+
+def render_methodology(data):
+    coverage = data["coverage"]
+    trend = data["trend"]
+    ats = ", ".join(
+        f"{name} ({count})"
+        for name, count in sorted(coverage["by_ats"].items(), key=lambda item: -item[1])
+    )
+
+    st.markdown('<p class="section-label">How HiddenHire works</p>',
+                unsafe_allow_html=True)
+    steps = "".join(
+        f'<div class="step"><span class="step-number">{number}</span>'
+        f'<span class="step-name">{name}</span>'
+        f'<span class="step-copy">{html.escape(copy)}</span></div>'
+        for number, (name, copy) in enumerate(PIPELINE_STEPS, start=1)
+    )
+    st.markdown(f'<div class="steps">{steps}</div>', unsafe_allow_html=True)
+
+    st.markdown('<p class="section-label">Coverage</p>', unsafe_allow_html=True)
+    st.markdown(
+        f'<p class="why-copy">{coverage["curated"]} venture-backed New York '
+        "startups were hand-picked in September 2026 from StartupsGallery, "
+        "TopStartups, and Y Combinator's directory, mostly Series A–B with "
+        f"11–500 employees. <b>{coverage['active']}</b> are collected every week "
+        f"through {ats}; the rest use job boards without a collector yet. "
+        f"<b>{len(trend)}</b> snapshots since {format_date(trend['Snapshot_Date'].min())}.</p>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<p class="section-label">Candidate Fit</p>', unsafe_allow_html=True)
+    st.markdown(weights_table(FIT_WEIGHTS), unsafe_allow_html=True)
+
+    st.markdown('<p class="section-label">Hiring Momentum</p>', unsafe_allow_html=True)
+    st.markdown(weights_table(MOMENTUM_WEIGHTS), unsafe_allow_html=True)
+    st.caption(
+        "Compares the latest snapshot with the one closest to 7 days earlier. "
+        "Each signal is divided by the company's open roles a week earlier "
+        "(counted as at least 10), so 5 new roles at a 15-job startup outweigh "
+        "5 at a 150-job company, then scaled against the 90th percentile."
+    )
+
+    st.markdown('<p class="section-label">Ranking</p>', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="why-copy"><b>Opportunity = 60% Candidate Fit + 40% Hiring '
+        "Momentum.</b> Openings below a fit of 40, or outside your target role "
+        "families, are left out. Scores are rule-based; no language model is used, "
+        "and every explanation is built only from signals the scores support.</p>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<p class="section-label">Data quality fixes</p>',
+                unsafe_allow_html=True)
+    st.markdown(
+        "".join(
+            f'<div class="method-row"><div class="method-name">{html.escape(name)}</div>'
+            f'<div class="method-copy">{html.escape(copy)}</div></div>'
+            for name, copy in DATA_FIXES
+        ),
+        unsafe_allow_html=True,
+    )
+    st.caption("Each fix is covered by tests in the repository.")
+
+    st.markdown('<p class="section-label">Limitations</p>', unsafe_allow_html=True)
+    st.markdown(
+        '<ul class="limits">'
+        + "".join(f"<li>{html.escape(item)}</li>" for item in LIMITATIONS)
+        + "</ul>",
+        unsafe_allow_html=True,
+    )
+    st.link_button("View source on GitHub", REPO_URL)
+
+
+def render_footer():
+    st.markdown(
+        '<div class="footer">Built by <b>Meng Han</b> · M.S. Management and '
+        "Analytics (Business Analytics), New York University · "
+        f'<a href="{LINKEDIN_URL}" target="_blank">LinkedIn</a> · '
+        f'<a href="{REPO_URL}" target="_blank">Source on GitHub</a> · '
+        "Independent MVP; job data comes from public career pages.</div>",
+        unsafe_allow_html=True,
+    )
+
+
 st.markdown("# HiddenHire")
 st.markdown(
     '<p class="tagline">Find the NYC startups hiring for you, before everyone else does.</p>'
@@ -929,8 +1170,8 @@ st.markdown(
 market_data = load_market_data(os.path.getmtime(FILE_PATH))
 render_stats_bar(market_data)
 
-search_tab, company_tab, market_tab = st.tabs(
-    ["Find Opportunities", "Company Momentum", "Market Insights"]
+search_tab, company_tab, market_tab, method_tab = st.tabs(
+    ["Find Opportunities", "Company Momentum", "Market Insights", "Methodology"]
 )
 
 with search_tab:
@@ -946,8 +1187,9 @@ with search_tab:
                 <div class="method-copy">Recent hiring activity at the company.</div>
             </div>
             <div class="method-row">
-                <div class="method-name">Hidden Opportunity</div>
-                <div class="method-copy">60% Candidate Fit + 40% Hiring Momentum.</div>
+                <div class="method-name">Opportunity</div>
+                <div class="method-copy">60% Candidate Fit + 40% Hiring Momentum.
+                Full details are in the Methodology tab.</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -1118,3 +1360,8 @@ with company_tab:
 
 with market_tab:
     render_market_insights(market_data)
+
+with method_tab:
+    render_methodology(market_data)
+
+render_footer()
