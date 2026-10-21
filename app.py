@@ -1019,6 +1019,7 @@ def render_company_momentum(data):
 
 
 REPO_URL = "https://github.com/mwhan99/HiddenHire"
+LINKEDIN_URL = "https://www.linkedin.com/in/meng-wen-han"
 
 PIPELINE_STEPS = [
     ("Collect", "Every Monday, GitHub Actions pulls each company's public job "
@@ -1150,6 +1151,7 @@ def render_footer():
     st.markdown(
         '<div class="footer">Built by <b>Meng Han</b> · M.S. Management and '
         "Analytics (Business Analytics), New York University · "
+        f'<a href="{LINKEDIN_URL}" target="_blank">LinkedIn</a> · '
         f'<a href="{REPO_URL}" target="_blank">Source on GitHub</a> · '
         "Independent MVP; job data comes from public career pages.</div>",
         unsafe_allow_html=True,
