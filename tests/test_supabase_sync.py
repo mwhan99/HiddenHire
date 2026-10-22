@@ -144,6 +144,12 @@ def test_headers_for_both_key_styles():
     assert legacy["Authorization"] == "Bearer eyJhbGciOi.payload.sig"
 
 
+def test_base_url_accepts_the_data_api_address():
+    assert sync.base_url("https://abc.supabase.co/rest/v1/") == "https://abc.supabase.co"
+    assert sync.base_url("https://abc.supabase.co/") == "https://abc.supabase.co"
+    assert sync.base_url(" https://abc.supabase.co ") == "https://abc.supabase.co"
+
+
 def test_read_env_file(tmp_path):
     path = tmp_path / ".env"
     path.write_text(

@@ -294,6 +294,15 @@ def read_env_file(path):
     return values
 
 
+def base_url(url):
+    """The project address without a trailing /rest/v1/, so the URL can
+    be pasted exactly as the dashboard's Data API page shows it."""
+    url = url.strip().rstrip("/")
+    if url.endswith("/rest/v1"):
+        url = url[: -len("/rest/v1")]
+    return url
+
+
 def settings():
     """(url, key) from the environment, falling back to .env."""
     env_file = read_env_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
@@ -304,7 +313,7 @@ def settings():
             "SUPABASE_URL and SUPABASE_SECRET_KEY are not set. Add them to "
             ".env (see the top of supabase_sync.py) or use --dry-run."
         )
-    return url.rstrip("/"), key
+    return base_url(url), key.strip()
 
 
 def headers(key):
