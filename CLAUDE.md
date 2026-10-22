@@ -86,6 +86,8 @@ Numbers below were checked against the data on Oct 22, 2026.
 | `lever_collector.py` | The same for Lever (`api.lever.co/v0/postings/<slug>?mode=json`). It joins the intro, the bullet lists and the closing text into one description. |
 | `gem_collector.py` | An unfinished experiment for reading Gem job boards. It imports `bs4`, which is not in `requirements.txt`. **Nothing uses it.** |
 | `.github/workflows/weekly-data-update.yml` | Runs the collectors every Monday and commits the updated workbook (see section 2). |
+| `supabase_sync.py` | Copies the workbook into Supabase (migration step 3). It reuses the existing Python scoring code to add job labels and to precalculate Company Momentum and Market Insights for every snapshot date. `--dry-run` builds everything without sending. It reads `SUPABASE_URL` and `SUPABASE_SECRET_KEY` from the environment or `.env`. |
+| `supabase/schema.sql` | The Supabase tables, plus the rules that make them read-only for the website (migration step 2). Safe to run again. |
 
 ### Data, tests and docs
 
@@ -385,10 +387,12 @@ So:
 - the cached pages above keep showing even if the database is briefly
   unreachable.
 
-**Security.** The website uses the public "anon" key, with Row Level
-Security set to *read-only*. Only the GitHub Action uses the secret
-"service role" key that can write. The service role key must **never**
-get a `NEXT_PUBLIC_` name or be used in browser code.
+**Security.** The website uses the public **publishable** key
+(`sb_publishable_...`, called "anon" in older projects), with Row Level
+Security set to *read-only*. Only the GitHub Action and
+`supabase_sync.py` use the **secret** key (`sb_secret_...`, called
+"service_role" in older projects), which can write. The secret key must
+**never** get a `NEXT_PUBLIC_` name or be used in browser code.
 
 ### Steps
 
@@ -416,7 +420,7 @@ Each step ends with a check. Don't start the next step until it passes.
    10-19.
 4. **Add the sync to the weekly workflow.** It goes as the **last** step,
    *after* "Commit the workbook", with `SUPABASE_URL` and
-   `SUPABASE_SERVICE_ROLE_KEY` saved as GitHub secrets. Because it comes
+   `SUPABASE_SECRET_KEY` saved as GitHub secrets. Because it comes
    last, a Supabase problem can never stop the spreadsheet update the
    Streamlit site depends on. The Excel commit stays exactly as it is, so
    for now the data goes to both places. *Check:* click "Run workflow" by hand.
@@ -430,7 +434,7 @@ Each step ends with a check. Don't start the next step until it passes.
    *Check:* `npm run dev` inside `web/` shows the starter page at
    localhost:3000.
 6. **Connect to Supabase.** Install `@supabase/supabase-js` and put the
-   URL and anon key in `web/.env.local`, which is git-ignored. Then
+   URL and publishable key in `web/.env.local`, which is git-ignored. Then
    connect Vercel: import the repo, set Root Directory = `web`, and add
    the same two variables. *Check:* a test page lists the company names,
    locally and on the Vercel preview link.
