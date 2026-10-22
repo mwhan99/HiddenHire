@@ -144,3 +144,16 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Weekly HiddenHire data update $(date +%F)"
           git push origin HEAD:main
+
+      # Last on purpose: the workbook (which the Streamlit site reads) is
+      # already committed, so a Supabase problem cannot stop that update.
+      - name: Sync to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SECRET_KEY" ]; then
+            echo "::warning::Supabase secrets are not set, so the sync was skipped."
+            exit 0
+          fi
+          python supabase_sync.py

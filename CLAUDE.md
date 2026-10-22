@@ -87,6 +87,7 @@ Numbers below were checked against the data on Oct 22, 2026.
 | `gem_collector.py` | An unfinished experiment for reading Gem job boards. It imports `bs4`, which is not in `requirements.txt`. **Nothing uses it.** |
 | `.github/workflows/weekly-data-update.yml` | Runs the collectors every Monday and commits the updated workbook (see section 2). |
 | `supabase_sync.py` | Copies the workbook into Supabase (migration step 3). It reuses the existing Python scoring code to add job labels and to precalculate Company Momentum and Market Insights for every snapshot date. `--dry-run` builds everything without sending. It reads `SUPABASE_URL` and `SUPABASE_SECRET_KEY` from the environment or `.env`. |
+| `.github/workflows/supabase.yml` | "Run workflow" re-syncs the current workbook to Supabase without scraping. It also reads one row every day so the free Supabase project never pauses. |
 | `supabase/schema.sql` | The Supabase tables, plus the rules that make them read-only for the website (migration step 2). Safe to run again. |
 
 ### Data, tests and docs
