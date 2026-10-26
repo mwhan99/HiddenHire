@@ -49,9 +49,9 @@ Numbers below were checked against the data on Oct 22, 2026.
   workflow rewrites it, and a merge conflict on a binary file can't be fixed by hand.
 - The workflow fails on purpose if the **Companies** sheet changes during
   a run. The company list is changed by hand, on purpose, and nowhere else.
-- Scoring numbers (weights, cutoffs, thresholds) appear in three places:
-  the Python code, the README "Scoring" section, and the Methodology tab
-  in `app.py`. Change all three together.
+- Scoring numbers (weights, cutoffs, thresholds) appear in four places:
+  the Python code, the README "Scoring" section, the Methodology tab in
+  `app.py`, and `web/app/methodology/page.tsx`. Change all four together.
 - Python 3.11+ is required (pandas 3.0.6 does not install on 3.10).
 - Secrets (Supabase keys) go in GitHub Actions secrets / Vercel
   environment variables, never in the repo.
@@ -76,6 +76,7 @@ Numbers below were checked against the data on Oct 22, 2026.
 | `web/app/page.tsx` | The home page: navy header, ticker, headline, the open-roles chart, growing-fastest companies, this week's new/closed roles, roles by function, and "How HiddenHire works". |
 | `web/app/companies/` | Company Momentum. `page.tsx` is the leaderboard of every company in the latest snapshot, with a Growing / Steady / Slowing / New filter (`components/CompanyBoard.tsx`, the site's first browser-side "client" component). `[id]/page.tsx` is one page per company (e.g. `/companies/C016`), all prebuilt with `generateStaticParams`. It shows open roles, the week's change, a trend chart with peak and low, roles by function, and the week's new postings (first 10, then a toggle). "Size" always means open roles a week earlier (at least 10), never headcount. |
 | `web/app/insights/page.tsx` | Market Insights ("This week's hiring briefing"). It has the week's headline numbers, **Key findings** (sentences generated from the data by `findings()`, so they stay correct each week), the open-roles trend, fastest-growing and slowing companies, and roles by function and industry (`components/BarList.tsx`). All of it is read from `market_summary` via `getLatestBriefing()`. |
+| `web/app/methodology/page.tsx` | Methodology. Sections: how it works, coverage (live counts from `getCoverage()`), Candidate Fit weights and the seniority table, Hiring Momentum, ranking, Company Momentum labels, data quality fixes, limitations, and a "How it's built" pipeline diagram. There's a sticky table of contents on wide screens. The scoring numbers here are hand-written and must match the Python code. |
 | `web/app/layout.tsx`, `web/app/not-found.tsx`, `web/app/icon.svg` | The frame around every page (font, page titles, footer); a styled "still being built" page for missing addresses; the browser-tab icon. |
 | `web/components/` | Shared pieces: `SiteHeader` (menu, `NAV_LINKS`, highlights the current section), `PageHeader` (navy band for inner pages), `SiteFooter`, `Logo`, `Ticker`, `Card`, `MomentumBadge` (label colours and explanations), and `charts.tsx` (hand-drawn SVG `Sparkline` and `AreaChart`, no chart library). |
 | `web/lib/format.ts` | Number and date display helpers (`fmt`, `signed`, `shortDate`, `longDate`, `nextMonday`). |
