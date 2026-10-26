@@ -372,6 +372,26 @@ st.markdown(
             font-size: 0.95rem !important;
             margin: 0.2rem 0;
         }
+        .moved-banner {
+            display: block;
+            background: #0b1b3a;
+            border-radius: 12px;
+            color: #ffffff !important;
+            font-size: 0.95rem !important;
+            line-height: 1.5;
+            margin-bottom: 1.2rem;
+            padding: 0.8rem 1rem;
+            text-decoration: none !important;
+        }
+        .moved-banner span {
+            color: #93c5fd;
+        }
+        .moved-banner:hover span {
+            text-decoration: underline;
+        }
+        .moved-banner .nowrap {
+            white-space: nowrap;
+        }
         .footer {
             border-top: 1px solid #e3e8ee;
             color: #667886;
@@ -1020,6 +1040,8 @@ def render_company_momentum(data):
 
 REPO_URL = "https://github.com/mwhan99/HiddenHire"
 LINKEDIN_URL = "https://www.linkedin.com/in/meng-wen-han"
+# The new Next.js site. This Streamlit app stays up as a backup for old links.
+NEW_SITE_URL = "https://hiddenhire-nyc.vercel.app"
 
 PIPELINE_STEPS = [
     ("Collect", "Every Monday, GitHub Actions pulls each company's public job "
@@ -1157,6 +1179,16 @@ def render_footer():
         unsafe_allow_html=True,
     )
 
+
+# target="_top": on Streamlit Cloud the app runs inside a frame, and the
+# link should open the new site in the whole window, not inside the frame.
+st.markdown(
+    f'<a class="moved-banner" href="{NEW_SITE_URL}" target="_top">'
+    "<b>HiddenHire has a faster new home.</b> "
+    "<span>Same data, updated weekly, with no wait to load. Visit "
+    '<span class="nowrap">hiddenhire-nyc.vercel.app →</span></span></a>',
+    unsafe_allow_html=True,
+)
 
 st.markdown("# HiddenHire")
 st.markdown(

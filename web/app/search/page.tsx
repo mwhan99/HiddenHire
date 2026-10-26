@@ -11,12 +11,12 @@ import { shortDate } from "@/lib/format";
 import { joinPhrases } from "@/lib/scoring/explain";
 import type { RankedOpportunity } from "@/lib/scoring/types";
 import { profileFromParams, runSearch, type SearchParams } from "@/lib/search";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Find roles",
-  description:
-    "Rank open roles at emerging New York startups by your fit and each company's hiring momentum.",
-};
+export const metadata: Metadata = pageMetadata(
+  "Find roles",
+  "Rank open roles at emerging New York startups by your fit and each company's hiring momentum.",
+);
 
 // The search page. The header is prebuilt; the form and results depend on
 // the address (?role=...&level=...), so they render on each request inside

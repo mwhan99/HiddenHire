@@ -2,9 +2,9 @@
 
 Discover emerging job opportunities through candidate fit and company hiring momentum.
 
-**[Try HiddenHire Live →](https://hiddenhire.streamlit.app/)**
+**[Try HiddenHire Live →](https://hiddenhire-nyc.vercel.app/)**
 
-![HiddenHire search results with the weekly stats bar](hiddenhire-results.png)
+![HiddenHire home page: this week's hiring briefing with a market ticker and live cards](hiddenhire-home.png)
 
 ## Overview
 
@@ -30,24 +30,23 @@ Candidate Profile → Job Data Collection → Candidate Fit → Hiring Momentum 
 
 ## Core Features
 
-- Stats bar on every page: companies tracked, open roles and the change from last week, new postings this week, and the company with the biggest jump in open roles
-- Candidate-to-job matching against the latest job snapshot
-- Candidate Fit scoring
-- Company Hiring Momentum from prior snapshots
-- Hidden Opportunity ranking, with one result card per company and its other matching roles listed underneath
+- **This week's briefing (home):** a scrolling ticker of each company's change in open roles, plus live cards for open roles over time, the fastest-growing companies, new and closed postings, and roles by job function
+- **Find roles:** candidate-to-job matching against the latest snapshot, ranked by Hidden Opportunity, with one result card per company and its other matching roles underneath. Every search has its own shareable link.
 - Fit and momentum shown as badges (`Fit 80`, `▲ Hiring fast`, `● Steady hiring`, `▼ Quieter hiring`)
-- “Why this opportunity?” explanations based on the calculated signals
-- Direct links to original job postings
-- Company Momentum tab: every tracked company ranked by weekly growth, with a trend line of open roles across all snapshots, plus a company view with roles by function and the week's new postings
-- Historical job snapshots stored by date
-- Automated weekly job-data collection
-- Market Insights tab: open, new, and closed roles this week, the fastest-growing and slowing companies, open roles by job function and industry, and open roles over time
+- “Why this opportunity?” explanations based on the calculated signals, and direct links to the original postings
+- **Company Momentum:** every tracked company ranked by size-adjusted weekly growth, with a Growing / Steady / Slowing filter, trend lines, and a page per company with its open-roles history, roles by function, and the week's new postings
+- **Market Insights:** open, new, and closed roles this week, automatically written key findings, the fastest-growing and slowing companies, and open roles by job function and industry
+- **Methodology:** how every score is calculated, the data quality fixes, and the limitations
+- Pages are prebuilt and refreshed hourly, so the site loads in well under a second and never has to wake up
+- Historical job snapshots stored by date, collected automatically every week
 
 ## Data Pipeline
 
 Public job posts are collected from company boards on Ashby, Greenhouse, and Lever. Each run stores that day’s openings in `HiddenHire_Data.xlsx` and keeps earlier snapshot dates.
 
 A GitHub Actions workflow runs the collectors in sequence, recalculates hiring momentum, and commits the updated workbook. It is scheduled for Monday morning New York time and can also be started manually. The company master list is not updated by the workflow.
+
+The workflow's last step, `supabase_sync.py`, copies the workbook into a Supabase (Postgres) database. It labels each job (role families, seniority, job function) and precalculates Company Momentum and Market Insights for every snapshot date using the same Python code. The website reads from Supabase with a read-only key, and a daily job keeps the free Supabase project awake.
 
 ## Company Coverage
 
@@ -74,8 +73,7 @@ Each fix has tests in `tests/`.
 - **Rule-based matching:** skills and roles are matched by keyword. Synonyms ("BI" vs. "business intelligence"), plurals, and roles outside the built-in role families are missed.
 - **Seniority from titles:** experience level is inferred from job titles only. Requirements stated in the description, such as "3+ years", are not read.
 - **Simple location matching:** locations are matched as text, and every remote posting gets partial credit regardless of region.
-- **Storage:** snapshots live in one Excel workbook that is rewritten each week. It works at this scale but will slow down as history grows.
-- **Hosting:** the free Streamlit tier puts the app to sleep after inactivity, so the first visit can take about 30 seconds to load.
+- **Storage:** the collectors still write one Excel workbook that is rewritten each week, then copy it to Supabase. It works at this scale; writing straight to Supabase is the next step as history grows.
 
 ## Scoring
 
@@ -97,21 +95,20 @@ Each signal is measured relative to the company's size (its open jobs a week ear
 
 **Hidden Opportunity** ranks each job as 60% Candidate Fit and 40% Hiring Momentum.
 
-**Company Momentum** ranks companies by their net change in open roles relative to size, using the same size adjustment and comparison window as Hiring Momentum. It does not depend on a candidate's profile. A company is labeled Growing when that size-adjusted change is at least +5%, Slowing at −5% or lower, and Steady in between. A company with no roles in the comparison snapshot is labeled New to tracking. The "Biggest jump" figure in the stats bar is the largest raw increase in open roles, so it can name a different company than the top of the size-adjusted ranking.
+**Company Momentum** ranks companies by their net change in open roles relative to size, using the same size adjustment and comparison window as Hiring Momentum. It does not depend on a candidate's profile. A company is labeled Growing when that size-adjusted change is at least +5%, Slowing at −5% or lower, and Steady in between. A company with no roles in the comparison snapshot is labeled New to tracking.
 
 **Market Insights** uses the same weekly snapshots and comparison window as Hiring Momentum. Job functions are assigned from titles by keyword (`market_insights.py`), so a small share of postings land in "Other". Industry counts use each company's industry tags, and a company with several tags counts toward each one.
 
 The explanation under each result uses only signals those scores already support, such as role match, skills, industry, location, and whether hiring momentum is elevated, steady, or quieter.
 
+The scoring is written in Python. The website runs the per-search part (Candidate Fit, Hiring Momentum, and the ranking) in TypeScript, so it can score a search instantly. A test suite checks that the TypeScript reproduces Python's results exactly, down to Python's rounding rules, for a set of fixed searches.
+
 ## Tech Stack
 
-- Python 3.11+
-- Pandas
-- Streamlit
-- Excel workbooks via OpenPyXL
-- Requests for public job-board APIs
-- GitHub Actions for the weekly update
-- pytest for the scoring tests
+- **Data and scoring:** Python 3.11+, pandas, Requests (public job-board APIs), OpenPyXL, pytest
+- **Pipeline:** GitHub Actions (weekly collection, Supabase sync, daily keep-awake), Supabase (Postgres with row-level security)
+- **Website:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Vitest, hosted on Vercel
+- **Previous version:** Streamlit, still running at [hiddenhire.streamlit.app](https://hiddenhire.streamlit.app/) as a backup
 
 ## Running the Tests
 
@@ -120,17 +117,29 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
+The website (in `web/`) has its own tests, including the checks against Python's results:
+
+```bash
+cd web
+npm install
+npm test
+```
+
 ## MVP Status
 
 HiddenHire is an independently developed MVP and portfolio project. It is actively being developed.
 
 ## Live Demo
 
-[Try HiddenHire Live](https://hiddenhire.streamlit.app/)
+[Try HiddenHire Live](https://hiddenhire-nyc.vercel.app/)
+
+## Find Roles
+
+![Search results: one card per company with Fit and momentum badges, the Opportunity score, and why it fits](hiddenhire-results.png)
 
 ## Company Momentum
 
-![Company Momentum leaderboard with weekly trend lines](hiddenhire-company-momentum.png)
+![Company Momentum leaderboard with a momentum filter and weekly trend lines](hiddenhire-company-momentum.png)
 
 ## Future Development
 
@@ -142,4 +151,5 @@ HiddenHire is an independently developed MVP and portfolio project. It is active
 ## Author
 
 **Meng Han**  
-M.S. Management and Analytics (Business Analytics), New York University
+M.S. Management and Analytics (Business Analytics), New York University  
+[LinkedIn](https://www.linkedin.com/in/meng-wen-han)

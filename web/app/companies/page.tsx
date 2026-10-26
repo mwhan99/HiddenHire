@@ -4,12 +4,12 @@ import { CompanyBoard } from "@/components/CompanyBoard";
 import { PageHeader } from "@/components/PageHeader";
 import { getLatestHeadline, getLatestMomentum } from "@/lib/data";
 import { shortDate } from "@/lib/format";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Company momentum",
-  description:
-    "Every tracked New York startup with open roles, ranked by week-over-week hiring growth relative to company size.",
-};
+export const metadata: Metadata = pageMetadata(
+  "Company momentum",
+  "Every tracked New York startup with open roles, ranked by week-over-week hiring growth relative to company size.",
+);
 
 export default async function CompaniesPage() {
   const [headline, rows] = await Promise.all([getLatestHeadline(), getLatestMomentum()]);

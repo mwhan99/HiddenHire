@@ -8,13 +8,13 @@ import { AreaChart } from "@/components/charts";
 import { PageHeader } from "@/components/PageHeader";
 import { getLatestBriefing, type Briefing, type Mover } from "@/lib/data";
 import { fmt, shortDate, shortIndustry, signed } from "@/lib/format";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Market insights",
-  description:
-    "This week's hiring briefing across tracked New York startups: open, new and closed roles, " +
+export const metadata: Metadata = pageMetadata(
+  "Market insights",
+  "This week's hiring briefing across tracked New York startups: open, new and closed roles, " +
     "the fastest-growing and slowing companies, and roles by function and industry.",
-};
+);
 
 // Market Insights: the week's numbers that are the same for every visitor,
 // all precalculated by market_insights.py and saved by supabase_sync.py.
