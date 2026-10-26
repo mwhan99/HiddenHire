@@ -1041,7 +1041,7 @@ def render_company_momentum(data):
 REPO_URL = "https://github.com/mwhan99/HiddenHire"
 LINKEDIN_URL = "https://www.linkedin.com/in/meng-wen-han"
 # The new Next.js site. This Streamlit app stays up as a backup for old links.
-NEW_SITE_URL = "https://hiddenhire-nyc.vercel.app"
+NEW_SITE_URL = "https://hidden-hire.vercel.app"
 
 PIPELINE_STEPS = [
     ("Collect", "Every Monday, GitHub Actions pulls each company's public job "
@@ -1186,7 +1186,7 @@ st.markdown(
     f'<a class="moved-banner" href="{NEW_SITE_URL}" target="_top">'
     "<b>HiddenHire has a faster new home.</b> "
     "<span>Same data, updated weekly, with no wait to load. Visit "
-    '<span class="nowrap">hiddenhire-nyc.vercel.app →</span></span></a>',
+    '<span class="nowrap">hidden-hire.vercel.app →</span></span></a>',
     unsafe_allow_html=True,
 )
 

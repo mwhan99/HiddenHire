@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 // The site's public address, used for link previews, the sitemap, and
 // robots.txt. Set a SITE_URL environment variable to change it (for
 // example after adding a custom domain); on your Mac it's localhost.
-export const PRODUCTION_URL = "https://hiddenhire-nyc.vercel.app";
+export const PRODUCTION_URL = "https://hidden-hire.vercel.app";
 
 export const SITE_URL = process.env.SITE_URL
   ? process.env.SITE_URL.replace(/\/$/, "")
