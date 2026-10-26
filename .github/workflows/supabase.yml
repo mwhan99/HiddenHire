@@ -1,0 +1,70 @@
+# Two small Supabase jobs that do not touch the workbook:
+#
+# - Manual sync: the "Run workflow" button copies the current workbook
+#   into Supabase without collecting new jobs. Useful after changing
+#   supabase_sync.py, or if the Monday sync step failed.
+# - Keep-awake: free Supabase projects pause after about a week with no
+#   activity, so a daily run reads one row to keep the project awake.
+
+name: Supabase sync and keep-awake
+
+on:
+  schedule:
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: hiddenhire-supabase-sync
+      cancel-in-progress: false
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Sync to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: python supabase_sync.py
+
+  keep-awake:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read one row from Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SECRET_KEY" ]; then
+            echo "::warning::Supabase secrets are not set, so nothing was checked."
+            exit 0
+          fi
+          # Accept the URL with or without /rest/v1/, like supabase_sync.py.
+          base="${SUPABASE_URL%/}"
+          base="${base%/rest/v1}"
+          status=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+            --header "apikey: $SUPABASE_SECRET_KEY" \
+            "$base/rest/v1/companies?select=company_id&limit=1")
+          echo "Supabase answered with status $status."
+          if [ "$status" != "200" ]; then
+            exit 1
+          fi
