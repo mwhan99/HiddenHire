@@ -128,7 +128,29 @@ export async function getLatestBriefing(): Promise<Briefing | null> {
   return data[0] ?? null;
 }
 
-export type MomentumLabel ="Growing" | "Steady" | "Slowing" | "New to tracking";
+export type Coverage = {
+  curated: number;
+  active: number;
+  by_ats: Record<string, number>;
+};
+
+// How many companies are on the list and collected, plus the snapshot
+// history, for the Methodology page.
+export async function getCoverage(): Promise<{ coverage: Coverage; trend: TrendPoint[] } | null> {
+  "use cache";
+  cacheLife("hours");
+
+  const { data, error } = await supabase()
+    .from("market_summary")
+    .select("coverage, trend")
+    .order("snapshot_date", { ascending: false })
+    .limit(1)
+    .overrideTypes<{ coverage: Coverage; trend: TrendPoint[] }[], { merge: false }>();
+  if (error) throw new Error(`Could not load coverage: ${error.message}`);
+  return data[0] ?? null;
+}
+
+export type MomentumLabel = "Growing" | "Steady" | "Slowing" | "New to tracking";
 
 export type CompanyMomentum = {
   company_id: string;
