@@ -82,16 +82,48 @@ export async function getLatestMarket(): Promise<{
   return data[0] ?? null;
 }
 
+export type MomentumLabel = "Growing" | "Steady" | "Slowing" | "New to tracking";
+
 export type CompanyMomentum = {
   company_id: string;
   company_name: string;
   open_now: number;
   net_change: number | null;
   new_roles: number | null;
-  momentum: "Growing" | "Steady" | "Slowing" | "New to tracking";
+  closed_roles: number | null;
+  growth_rate: number | null;
+  momentum: MomentumLabel;
   rank: number;
   trend: number[];
+  // From the companies table.
+  industry: string | null;
+  company_stage: string | null;
+  company_size: string | null;
+  company_website: string | null;
 };
+
+export type CompanyDetail = CompanyMomentum & {
+  functions: { function: string; open_now: number }[];
+  new_postings: { job_title: string | null; location: string | null; job_url: string | null }[];
+};
+
+const MOMENTUM_COLUMNS =
+  "company_id, company_name, open_now, net_change, new_roles, closed_roles, growth_rate, momentum, rank, trend, " +
+  "companies(industry, company_stage, company_size, company_website)";
+
+type CompanyInfo = Pick<CompanyMomentum, "industry" | "company_stage" | "company_size" | "company_website">;
+
+// Supabase returns the joined company as a nested object; flatten it.
+function flatten<T extends { companies: CompanyInfo | null }>(row: T) {
+  const { companies, ...rest } = row;
+  return {
+    ...rest,
+    industry: companies?.industry ?? null,
+    company_stage: companies?.company_stage ?? null,
+    company_size: companies?.company_size ?? null,
+    company_website: companies?.company_website ?? null,
+  };
+}
 
 // The latest Company Momentum leaderboard, best first.
 export async function getLatestMomentum(): Promise<CompanyMomentum[]> {
@@ -102,11 +134,40 @@ export async function getLatestMomentum(): Promise<CompanyMomentum[]> {
   if (!latest) return [];
   const { data, error } = await supabase()
     .from("company_momentum")
-    .select("company_id, company_name, open_now, net_change, new_roles, momentum, rank, trend")
+    .select(MOMENTUM_COLUMNS)
     .eq("snapshot_date", latest)
-    .order("rank");
+    .order("rank")
+    .overrideTypes<(Omit<CompanyMomentum, keyof CompanyInfo> & { companies: CompanyInfo | null })[], { merge: false }>();
   if (error) throw new Error(`Could not load Company Momentum: ${error.message}`);
-  return data;
+  return data.map(flatten);
+}
+
+// One company's latest row, with its roles by function and this week's
+// new postings. Null when the company is not in the latest snapshot.
+export async function getCompanyDetail(companyId: string): Promise<CompanyDetail | null> {
+  "use cache";
+  cacheLife("hours");
+
+  const latest = await getLatestSnapshotDate();
+  if (!latest) return null;
+  const { data, error } = await supabase()
+    .from("company_momentum")
+    .select(`${MOMENTUM_COLUMNS}, functions, new_postings`)
+    .eq("snapshot_date", latest)
+    .eq("company_id", companyId)
+    .limit(1)
+    .overrideTypes<(Omit<CompanyDetail, keyof CompanyInfo> & { companies: CompanyInfo | null })[], { merge: false }>();
+  if (error) throw new Error(`Could not load ${companyId}: ${error.message}`);
+  return data[0] ? flatten(data[0]) : null;
+}
+
+// Every snapshot date, oldest first. Company trend arrays line up with it.
+export async function getSnapshotDates(): Promise<string[]> {
+  "use cache";
+  cacheLife("hours");
+
+  const market = await getLatestMarket();
+  return (market?.trend ?? []).map((point) => point.snapshot_date.slice(0, 10));
 }
 
 export async function getLatestSnapshotDate(): Promise<string | null> {

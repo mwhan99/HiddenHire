@@ -37,3 +37,14 @@ export function nextMonday(value: string) {
   date.setUTCDate(date.getUTCDate() + daysAhead);
   return date.toISOString().slice(0, 10);
 }
+
+// "AI / FinTech / SaaS" -> "AI · FinTech" (the first two industry tags).
+export function shortIndustry(industry: string | null) {
+  if (!industry) return "";
+  return industry
+    .split("/")
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(" · ");
+}
