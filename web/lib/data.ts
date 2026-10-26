@@ -55,6 +55,33 @@ export async function getLatestHeadline(): Promise<Headline | null> {
   return data[0]?.headline ?? null;
 }
 
+export type TrendPoint = { snapshot_date: string; open_roles: number; companies: number };
+export type FunctionCount = {
+  function: string;
+  open_now: number;
+  previous_open: number;
+  net_change: number;
+};
+
+// Open roles at every snapshot and roles by job function, as of the
+// latest snapshot (market_insights.open_roles_over_time and
+// roles_by_function in Python).
+export async function getLatestMarket(): Promise<{
+  trend: TrendPoint[];
+  functions: FunctionCount[];
+} | null> {
+  "use cache";
+  cacheLife("hours");
+
+  const { data, error } = await supabase()
+    .from("market_summary")
+    .select("trend, functions")
+    .order("snapshot_date", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`Could not load Market Insights: ${error.message}`);
+  return data[0] ?? null;
+}
+
 export type CompanyMomentum = {
   company_id: string;
   company_name: string;
