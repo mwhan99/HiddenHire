@@ -22,7 +22,7 @@ import json
 import math
 import os
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 import pandas as pd
 import requests
@@ -245,7 +245,7 @@ def build_tables(companies, jobs):
     (companies first, because the other tables point at them)."""
     history, active = market_insights.prepare_history(jobs, companies)
     dates = sorted(history["Snapshot_Date"].unique())
-    return {
+    tables = {
         "companies": company_rows(companies),
         "job_snapshots": job_snapshot_rows(jobs),
         "job_descriptions": description_rows(jobs),
@@ -258,6 +258,13 @@ def build_tables(companies, jobs):
             for snapshot_date in dates
         ],
     }
+    # The schema's default only fills updated_at when a row is first
+    # added, so send it on every sync to record when it was last saved.
+    synced_at = datetime.now(timezone.utc).isoformat()
+    for table in ["companies", "market_summary"]:
+        for row in tables[table]:
+            row["updated_at"] = synced_at
+    return tables
 
 
 # Columns that identify a row, matching each table's primary key.
