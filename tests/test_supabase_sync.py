@@ -101,6 +101,9 @@ def test_build_tables_matches_market_insights():
         assert len(keys) == len(set(keys)), name
 
     assert [row["company_id"] for row in tables["companies"]] == ["A", "B", "X"]
+    # updated_at is sent on every sync, not only when a row is first added.
+    stamps = {row["updated_at"] for row in tables["companies"] + tables["market_summary"]}
+    assert len(stamps) == 1 and stamps.pop().endswith("+00:00")
     assert tables["companies"][2]["active"] is False
     assert tables["companies"][0]["date_added"] == "2026-09-18"
 
