@@ -9,15 +9,25 @@ export const NAV_LINKS = [
   { href: "/methodology", label: "Methodology" },
 ];
 
-// The menu bar, drawn for a navy background. On phones only the logo and
-// the main button show.
-export function SiteHeader() {
+// The menu bar, drawn for a navy background. `active` is the href of the
+// current section, shown in white. On phones only the logo and the main
+// button show.
+export function SiteHeader({ active }: { active?: string }) {
   return (
     <header className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-5">
       <Logo dark />
-      <nav aria-label="Main" className="hidden items-center gap-8 text-[15px] text-slate-300 md:flex">
+      <nav aria-label="Main" className="hidden items-center gap-8 text-[15px] md:flex">
         {NAV_LINKS.map((link) => (
-          <Link key={link.href} href={link.href} className="transition-colors hover:text-white">
+          <Link
+            key={link.href}
+            href={link.href}
+            aria-current={link.href === active ? "page" : undefined}
+            className={
+              link.href === active
+                ? "font-medium text-white"
+                : "text-slate-300 transition-colors hover:text-white"
+            }
+          >
             {link.label}
           </Link>
         ))}

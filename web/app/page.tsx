@@ -105,7 +105,7 @@ export default async function HomePage() {
             )}
           </div>
           <div className="mt-4">
-            <AreaChart trend={trend} />
+            <AreaChart points={trend.map((point) => ({ date: point.snapshot_date, value: point.open_roles }))} />
           </div>
         </Card>
 
@@ -115,7 +115,7 @@ export default async function HomePage() {
             {movers.map((row) => (
               <li key={row.company_id} className="flex items-center justify-between gap-3">
                 <span className="min-w-0">
-                  <span className="block truncate font-medium">{row.company_name}</span>
+                  <Link href={`/companies/${row.company_id}`} className="block truncate font-medium hover:text-brand">{row.company_name}</Link>
                   <span className="text-sm text-slate-500">{fmt(row.open_now)} open roles</span>
                 </span>
                 <Sparkline values={row.trend} width={64} />
