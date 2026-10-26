@@ -45,6 +45,13 @@ Numbers below were checked against the data on Oct 22, 2026.
     open https://hiddenhire.streamlit.app/ and check it still loads.
 - Run the tests before and after any Python change:
   `pip install -r requirements-dev.txt` then `pytest` (52 tests today).
+- **The search scoring exists twice**, in Python and in TypeScript
+  (`web/lib/scoring/`). After any change to `candidate_fit.py`,
+  `hiring_momentum.py`, `pipeline.py`, or `explain_opportunity` in
+  `app.py`, run `python scripts/export_golden.py` using the
+  `requirements.txt` package versions (pandas 3.0.6). Then run `npm test`
+  in `web/` and update the TypeScript until it passes again. Commit the
+  regenerated `config.json` and `golden.json.gz`.
 - Never edit `HiddenHire_Data.xlsx` by hand in a commit. The weekly
   workflow rewrites it, and a merge conflict on a binary file can't be fixed by hand.
 - The workflow fails on purpose if the **Companies** sheet changes during
@@ -80,6 +87,8 @@ Numbers below were checked against the data on Oct 22, 2026.
 | `web/app/layout.tsx`, `web/app/not-found.tsx`, `web/app/icon.svg` | The frame around every page (font, page titles, footer); a styled "still being built" page for missing addresses; the browser-tab icon. |
 | `web/components/` | Shared pieces: `SiteHeader` (menu, `NAV_LINKS`, highlights the current section), `PageHeader` (navy band for inner pages), `SiteFooter`, `Logo`, `Ticker`, `Card`, `MomentumBadge` (label colours and explanations), and `charts.tsx` (hand-drawn SVG `Sparkline` and `AreaChart`, no chart library). |
 | `web/lib/format.ts` | Number and date display helpers (`fmt`, `signed`, `shortDate`, `longDate`, `nextMonday`). |
+| `web/lib/scoring/` | The per-search scoring in TypeScript (migration step 8). `fit.ts` is Candidate Fit, `momentum.ts` is Hiring Momentum and the comparison dates, `rank.ts` combines them 60/40 and sorts, and `explain.ts` writes "Why this opportunity?" and the momentum badge. `match.ts` holds whole-word matching and role families, and `rounding.ts` copies Python's rounding (`round()` sends .5 to the even neighbour, pandas multiplies first, and quantile "nearest" rounds its position to even). `config.json` is **generated**, so don't edit it by hand. `scoring.test.ts` (run with `npm test`, Vitest 4) checks every result against Python's. |
+| `scripts/export_golden.py` | Writes `web/lib/scoring/config.json` (role families, exclusions, seniority scores, family labels) and `__fixtures__/golden.json.gz`: 5 fixed searches with the exact Supabase-shaped inputs and Python's results, momentum per company, and explanation. It reads `explain_opportunity` from `app.py` without running Streamlit. |
 | `web/lib/supabase.ts`, `web/lib/data.ts` | Read from Supabase with the read-only publishable key. Each data function uses `"use cache"` + `cacheLife("hours")`, so pages are prebuilt and refreshed about hourly. Settings: `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `web/.env.local` (git-ignored) and in Vercel. They have no `NEXT_PUBLIC_` prefix, so they stay on the server. |
 | Monday timing | The Monday job commits the workbook *before* it syncs Supabase, so Vercel's rebuild can run a minute before the new data arrives. The site can then show last week's numbers for up to an hour, until the hourly refresh catches up. |
 | `web/AGENTS.md` | Written by Next.js itself. **This Next.js version differs from older ones**, so read the matching guide in `web/node_modules/next/dist/docs/` before writing Next.js code. Cache Components and Partial Prefetching are switched on in `web/next.config.ts`. |
@@ -476,7 +485,7 @@ Each step ends with a check. Don't start the next step until it passes.
 
 **Phase C — the search (the risky part)**
 
-8. **Re-write the per-search scoring in TypeScript**, in
+8. **Re-write the per-search scoring in TypeScript** (done, see `web/lib/scoring/`), in
    `web/lib/scoring/`:
    - `contains_term`. JavaScript regex supports the same "not part of a
      longer word" check.
