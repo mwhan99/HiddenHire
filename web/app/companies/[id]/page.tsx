@@ -9,6 +9,7 @@ import { MOMENTUM_STYLES, MomentumBadge } from "@/components/MomentumBadge";
 import { PageHeader } from "@/components/PageHeader";
 import { getCompanyDetail, getLatestMomentum, getSnapshotDates, type CompanyDetail } from "@/lib/data";
 import { fmt, shortDate, shortIndustry, signed } from "@/lib/format";
+import { pageMetadata } from "@/lib/site";
 
 // One page per company, e.g. /companies/C024. Every company in the latest
 // snapshot is prebuilt; a company added later is built on its first visit.
@@ -22,10 +23,10 @@ export async function generateMetadata({ params }: PageProps<"/companies/[id]">)
   const { id } = await params;
   const company = await getCompanyDetail(id);
   if (!company) return { title: "Company not found" };
-  return {
-    title: `${company.company_name} hiring momentum`,
-    description: `${company.company_name} has ${fmt(company.open_now)} open roles, tracked weekly by HiddenHire.`,
-  };
+  return pageMetadata(
+    `${company.company_name} hiring momentum`,
+    `${company.company_name} has ${fmt(company.open_now)} open roles (${company.momentum.toLowerCase()} this week), tracked weekly by HiddenHire.`,
+  );
 }
 
 export default async function CompanyPage({ params }: PageProps<"/companies/[id]">) {

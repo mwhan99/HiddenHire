@@ -5,13 +5,13 @@ import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { getCoverage } from "@/lib/data";
 import { fmt, longDate } from "@/lib/format";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Methodology",
-  description:
-    "How HiddenHire collects weekly job snapshots, scores Candidate Fit and Hiring Momentum, " +
+export const metadata: Metadata = pageMetadata(
+  "Methodology",
+  "How HiddenHire collects weekly job snapshots, scores Candidate Fit and Hiring Momentum, " +
     "ranks openings, and what its limits are.",
-};
+);
 
 // Every number on this page must match the Python code (candidate_fit.py,
 // hiring_momentum.py, pipeline.py, market_insights.py), the README's

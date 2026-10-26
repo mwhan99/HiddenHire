@@ -9,11 +9,14 @@ startups every week, then ranks openings for a job seeker by
 **Candidate Fit** (how well a role matches them) and **Hiring Momentum**
 (how fast the company is adding roles).
 
-- Live site today: https://hiddenhire.streamlit.app/ (Streamlit, Python)
+- Live site: https://hiddenhire-nyc.vercel.app (Next.js on Vercel, data in
+  Supabase). This is the link on Meng's résumé and README.
+- Backup: https://hiddenhire.streamlit.app/ (the original Streamlit app). It
+  shows a "faster new home" banner and stays up for old links.
 - Repo: https://github.com/mwhan99/HiddenHire
-- Goal in progress: move the **website** to Next.js (App Router,
-  TypeScript, Tailwind) on Vercel, with data in Supabase. The **Python
-  scraper stays in Python.** See [Migration plan](#4-migration-plan).
+- The website moved to Next.js (App Router, TypeScript, Tailwind) on Vercel
+  in migration steps 1–11. The **Python scraper stays in Python.** See
+  [Migration plan](#4-migration-plan).
 
 Why the move, in Meng's words:
 1. **It should look polished**, at the level of Meng's other project,
@@ -32,17 +35,15 @@ Numbers below were checked against the data on Oct 22, 2026.
 
 ## Working rules
 
-- **The Streamlit site must stay up until the switch-over (step 11).**
-  Meng is job hunting and the link is on applications. Until step 11:
-  - Don't change `app.py`, `pipeline.py`, the scoring files,
-    `requirements.txt` or the workbook's layout. Streamlit Cloud rebuilds
-    the site from `main` on every push, and those are the files it runs.
-  - New work goes in new files and folders (`web/`, `supabase/`,
-    `supabase_sync.py`, `scripts/`), which Streamlit ignores.
-  - Anything the Supabase sync needs goes in its own requirements file,
-    not `requirements.txt`.
+- **Both sites must keep working.** Meng is job hunting; the Vercel link
+  is on new applications and the Streamlit link is on older ones.
   - Work on a branch and merge with a pull request. After each merge,
-    open https://hiddenhire.streamlit.app/ and check it still loads.
+    check https://hiddenhire-nyc.vercel.app and
+    https://hiddenhire.streamlit.app/ both load.
+  - Streamlit Cloud rebuilds from `main` on every push and runs `app.py`,
+    `pipeline.py`, the scoring files and `requirements.txt`. Keep changes
+    there small, and keep `requirements.txt` limited to what Streamlit
+    needs (the Supabase sync uses only packages already in it).
 - Run the tests before and after any Python change:
   `pip install -r requirements-dev.txt` then `pytest` (52 tests today).
 - **The search scoring exists twice**, in Python and in TypeScript
@@ -67,18 +68,18 @@ Numbers below were checked against the data on Oct 22, 2026.
 
 ## 1. What each file does
 
-### The website (Streamlit, to be replaced)
+### The original website (Streamlit, now the backup)
 
 | File | What it does |
 |---|---|
-| `app.py` | The whole website. It shows a page title, a stats bar, four tabs (Find Opportunities, Company Momentum, Market Insights, Methodology), and a footer. It reads the workbook on page load and caches the results until the file changes. It holds the CSS, the "Why this opportunity?" sentence builder (`explain_opportunity`), the badge rules, and the Methodology text. |
+| `app.py` | The original Streamlit website, now the backup. A "faster new home" banner at the top links to the new site (`NEW_SITE_URL`). It shows a page title, a stats bar, four tabs (Find Opportunities, Company Momentum, Market Insights, Methodology), and a footer. It reads the workbook on page load and caches the results until the file changes. It holds the CSS, the "Why this opportunity?" sentence builder (`explain_opportunity`), the badge rules, and the Methodology text. |
 | `.streamlit/config.toml` | Forces the light theme and sets the brand colours (`#0e4c5c` teal, `#f4f6f8` background, `#17212b` text). |
 
-### The new website (Next.js, in progress)
+### The website (Next.js)
 
 | File | What it does |
 |---|---|
-| `web/` | The Next.js app (Next.js 16.4, React 19, Tailwind 4, TypeScript), live at https://hidden-hire.vercel.app. Vercel redeploys on every push to `main`. Run it locally with `npm run dev` inside `web/`, then open http://localhost:3000. Check it with `npm run lint` and `npm run build`. Don't run `npm run build` while `npm run dev` is running: they share `.next/` and the dev server breaks until restarted. |
+| `web/` | The Next.js app (Next.js 16.4, React 19, Tailwind 4, TypeScript), live at https://hiddenhire-nyc.vercel.app (the Vercel project is named `hidden-hire`). Vercel redeploys on every push to `main`. Run it locally with `npm run dev` inside `web/`, then open http://localhost:3000. Check it with `npm run lint` and `npm run build`. Don't run `npm run build` while `npm run dev` is running: they share `.next/` and the dev server breaks until restarted. |
 | Design | Chosen in step 7: the **"Data briefing"** layout. A navy header (`bg-navy`) with a scrolling ticker of this week's changes, a left-aligned headline, then white cards of live data. Cobalt blue `brand` (#2563eb), green `up` for gains, Inter font. Colours are defined in `web/app/globals.css`. It deliberately avoids Parrot's look: no centred hero, floating pill nav, pastel blobs, gradient headline text or floating bubbles. |
 | `web/app/page.tsx` | The home page: navy header, ticker, headline, the open-roles chart, growing-fastest companies, this week's new/closed roles, roles by function, and "How HiddenHire works". |
 | `web/app/companies/` | Company Momentum. `page.tsx` is the leaderboard of every company in the latest snapshot, with a Growing / Steady / Slowing / New filter (`components/CompanyBoard.tsx`, the site's first browser-side "client" component). `[id]/page.tsx` is one page per company (e.g. `/companies/C016`), all prebuilt with `generateStaticParams`. It shows open roles, the week's change, a trend chart with peak and low, roles by function, and the week's new postings (first 10, then a toggle). "Size" always means open roles a week earlier (at least 10), never headcount. |
@@ -524,7 +525,8 @@ Each step ends with a check. Don't start the next step until it passes.
     in Vercel. Otherwise the free address is `<name>.vercel.app`.
     *Check:* test on a real phone. Open the link in a private window
     after a few days with no visitors: it should load in about a second.
-11. **Switch over.** Point the README and résumé links at the Vercel URL
+11. **Switch over** (done in the repo: README, screenshots, Streamlit
+    banner; the résumé and LinkedIn are Meng's). Point the README and résumé links at the Vercel URL
     and refresh the screenshots. Keep the Streamlit app running as a
     backup for as long as old applications might still be read; it costs
     nothing. When it is finally retired, replace it with a short page
