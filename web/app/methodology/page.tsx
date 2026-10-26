@@ -197,7 +197,7 @@ export default async function MethodologyPage() {
                     <tr className="border-b border-slate-200">
                       <th scope="col" className="py-2 pr-2 text-left font-semibold sm:pr-4">You are</th>
                       {["Entry", "Mid", "Senior", "Unclear"].map((label) => (
-                        <th key={label} scope="col" className="px-2 py-2 text-right font-semibold sm:px-3">{label}</th>
+                        <th key={label} scope="col" className="px-1.5 py-2 text-right font-semibold sm:px-3">{label}</th>
                       ))}
                     </tr>
                   </thead>
@@ -206,7 +206,7 @@ export default async function MethodologyPage() {
                       <tr key={row.level}>
                         <th scope="row" className="py-2 pr-4 text-left font-medium">{row.level}</th>
                         {row.scores.map((score, index) => (
-                          <td key={index} className={`px-2 py-2 text-right sm:px-3 tabular-nums ${score === 100 ? "font-semibold text-brand" : score === 0 ? "text-slate-400" : ""}`}>
+                          <td key={index} className={`px-1.5 py-2 text-right sm:px-3 tabular-nums ${score === 100 ? "font-semibold text-brand" : score === 0 ? "text-slate-400" : ""}`}>
                             {score}
                           </td>
                         ))}

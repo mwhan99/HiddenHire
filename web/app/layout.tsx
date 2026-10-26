@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
 import { SiteFooter } from "@/components/SiteFooter";
+import { SITE_URL } from "@/lib/site";
 
 import "./globals.css";
 
@@ -15,6 +16,7 @@ const DESCRIPTION =
   "and ranks openings by your fit and each company's hiring momentum.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "HiddenHire · NYC startup hiring signals",
     template: "%s · HiddenHire",
@@ -24,6 +26,10 @@ export const metadata: Metadata = {
     title: "HiddenHire · NYC startup hiring signals",
     description: DESCRIPTION,
     type: "website",
+    siteName: "HiddenHire",
+  },
+  twitter: {
+    card: "summary_large_image",
   },
 };
 

@@ -3,6 +3,8 @@ import Form from "next/form";
 import { FAMILY_LABELS, FAMILY_ORDER, ROLE_FAMILIES } from "@/lib/scoring/match";
 import type { SearchProfile } from "@/lib/scoring/types";
 
+import { SubmitButton } from "./SubmitButton";
+
 // The search form. It submits to /search as ordinary URL values
 // (?role=...&level=...), so every search has its own shareable link, and
 // it works without JavaScript. Role chips are real checkboxes styled as
@@ -111,9 +113,7 @@ export function SearchForm({ profile, open }: { profile: SearchProfile; open: bo
           <Field name="industries" label="Preferred industries" hint="Separate with commas" defaultValue={profile.industries.join(", ")} placeholder="fintech, AI, enterprise software" />
         </div>
 
-        <button type="submit" className="mt-6 rounded-lg bg-brand px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-500">
-          Find my matches →
-        </button>
+        <SubmitButton />
       </Form>
     </details>
   );

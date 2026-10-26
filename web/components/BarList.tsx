@@ -12,7 +12,7 @@ export function BarList({
       {items.map((item) => (
         <li key={item.label}>
           <div className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="truncate">{item.label}</span>
+            <span className="min-w-0 truncate">{item.label}</span>
             <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
               <span className="text-slate-600">{fmt(item.value)}</span>
               {item.change !== undefined && (

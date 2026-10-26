@@ -147,7 +147,7 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
               {company.new_postings.length > POSTINGS_SHOWN && (
                 // A plain <details> toggle: no JavaScript needed.
                 <details className="group">
-                  <summary className="mt-2 cursor-pointer list-none font-semibold text-brand hover:text-blue-500">
+                  <summary className="mt-2 inline-block cursor-pointer list-none py-1.5 font-semibold text-brand hover:text-blue-500">
                     <span className="group-open:hidden">Show all {company.new_postings.length} new postings</span>
                     <span className="hidden group-open:inline">Show fewer</span>
                   </summary>

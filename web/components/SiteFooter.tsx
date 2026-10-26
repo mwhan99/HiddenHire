@@ -22,10 +22,10 @@ export function SiteFooter() {
         </div>
         <nav aria-label="Footer" className="text-sm">
           <div className="font-semibold text-ink">Explore</div>
-          <ul className="mt-3 space-y-2 text-slate-600">
+          <ul className="mt-2 space-y-1 text-slate-600">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
-                <Link href={link.href} className="hover:text-blue-600">
+                <Link href={link.href} className="inline-block py-1 hover:text-blue-600">
                   {link.label}
                 </Link>
               </li>
@@ -34,14 +34,14 @@ export function SiteFooter() {
         </nav>
         <div className="text-sm">
           <div className="font-semibold text-ink">Connect</div>
-          <ul className="mt-3 space-y-2 text-slate-600">
+          <ul className="mt-2 space-y-1 text-slate-600">
             <li>
-              <a href={LINKEDIN_URL} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
+              <a href={LINKEDIN_URL} target="_blank" rel="noopener noreferrer" className="inline-block py-1 hover:text-blue-600">
                 LinkedIn ↗
               </a>
             </li>
             <li>
-              <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
+              <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="inline-block py-1 hover:text-blue-600">
                 Source on GitHub ↗
               </a>
             </li>

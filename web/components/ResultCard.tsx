@@ -75,7 +75,7 @@ export function ResultCard({ rows, profile }: { rows: RankedOpportunity[]; profi
 
       {others.length > 0 && (
         <details className="group mt-4 border-t border-slate-100 pt-3">
-          <summary className="cursor-pointer list-none text-sm font-semibold text-slate-600 hover:text-ink">
+          <summary className="cursor-pointer list-none py-1.5 text-sm font-semibold text-slate-600 hover:text-ink">
             <span className="inline-block transition-transform group-open:rotate-90">›</span> {others.length} more matching{" "}
             {others.length === 1 ? "role" : "roles"} at {best.company_name}
           </summary>

@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ResultCard } from "@/components/ResultCard";
 import { roleLabel, SearchForm } from "@/components/SearchForm";
+import { SearchSkeleton } from "@/components/SearchSkeleton";
 import { getLatestHeadline } from "@/lib/data";
 import { shortDate } from "@/lib/format";
 import { joinPhrases } from "@/lib/scoring/explain";
@@ -38,7 +39,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
         }
       />
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <Suspense fallback={<ResultsSkeleton />}>
+        <Suspense fallback={<SearchSkeleton />}>
           <SearchResults searchParams={searchParams} />
         </Suspense>
       </div>
@@ -108,16 +109,4 @@ async function SearchResults({ searchParams }: { searchParams: Promise<SearchPar
 
 function Notice({ children }: { children: React.ReactNode }) {
   return <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-slate-700">{children}</div>;
-}
-
-function ResultsSkeleton() {
-  return (
-    <div className="space-y-6" aria-busy="true" aria-label="Finding your matches">
-      <div className="h-24 animate-pulse rounded-2xl bg-white shadow-sm" />
-      <div className="h-7 w-64 animate-pulse rounded bg-slate-200" />
-      {[0, 1, 2].map((index) => (
-        <div key={index} className="h-56 animate-pulse rounded-2xl bg-white shadow-sm" />
-      ))}
-    </div>
-  );
 }
