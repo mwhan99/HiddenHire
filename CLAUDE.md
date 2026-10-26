@@ -72,6 +72,8 @@ Numbers below were checked against the data on Oct 22, 2026.
 | File | What it does |
 |---|---|
 | `web/` | The Next.js app (Next.js 16.4, React 19, Tailwind 4, TypeScript). It was created with `create-next-app` in migration step 5 and is still the starter page. Run it with `npm run dev` inside `web/`, then open http://localhost:3000. Check it with `npm run lint` and `npm run build`. |
+| `web/lib/supabase.ts`, `web/lib/data.ts` | Read from Supabase with the read-only publishable key. Each data function uses `"use cache"` + `cacheLife("hours")`, so pages are prebuilt and refreshed about hourly. Settings: `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `web/.env.local` (git-ignored) and in Vercel. They have no `NEXT_PUBLIC_` prefix, so they stay on the server. |
+| `web/app/data-check/` | A temporary page (migration step 6) listing the companies, to prove the Supabase connection works. Delete it once the real pages exist. |
 | `web/AGENTS.md` | Written by Next.js itself. **This Next.js version differs from older ones**, so read the matching guide in `web/node_modules/next/dist/docs/` before writing Next.js code. Cache Components and Partial Prefetching are switched on in `web/next.config.ts`. |
 
 ### Scoring and analysis (pure Python, no web code)
