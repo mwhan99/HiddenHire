@@ -1,0 +1,146 @@
+{
+  "role_families": {
+    "business_analytics": [
+      "business analyst",
+      "data analyst",
+      "business intelligence",
+      "analytics analyst",
+      "insights analyst"
+    ],
+    "strategy": [
+      "strategy analyst",
+      "strategy associate",
+      "strategic planning",
+      "corporate strategy",
+      "business strategy",
+      "strategy and operations",
+      "strategy & operations"
+    ],
+    "operations": [
+      "operations analyst",
+      "operations associate",
+      "business operations",
+      "revenue operations",
+      "sales operations",
+      "product operations"
+    ],
+    "finance": [
+      "financial analyst",
+      "finance analyst",
+      "strategic finance",
+      "fp&a",
+      "corporate development"
+    ],
+    "marketing_growth": [
+      "marketing analyst",
+      "growth analyst",
+      "growth associate",
+      "growth marketing",
+      "marketing operations"
+    ],
+    "product": [
+      "product analyst",
+      "product associate",
+      "product manager",
+      "product operations"
+    ],
+    "software_engineering": [
+      "software engineer",
+      "software developer",
+      "frontend engineer",
+      "backend engineer",
+      "full stack engineer"
+    ],
+    "data_science_ml": [
+      "data scientist",
+      "machine learning engineer",
+      "ml engineer",
+      "ai engineer"
+    ]
+  },
+  "role_exclusions": [
+    "workplace operations",
+    "people operations",
+    "legal operations",
+    "clinical operations",
+    "security operations",
+    "facilities operations"
+  ],
+  "experience_levels": [
+    "entry",
+    "mid",
+    "senior"
+  ],
+  "seniority_scores": {
+    "entry": {
+      "entry": 100,
+      "mid": 40,
+      "senior": 0,
+      "unknown": 50
+    },
+    "mid": {
+      "entry": 50,
+      "mid": 100,
+      "senior": 40,
+      "unknown": 50
+    },
+    "senior": {
+      "entry": 0,
+      "mid": 50,
+      "senior": 100,
+      "unknown": 50
+    }
+  },
+  "supported_roles": [
+    "business analyst",
+    "data analyst",
+    "business intelligence",
+    "analytics analyst",
+    "insights analyst",
+    "strategy analyst",
+    "strategy associate",
+    "strategic planning",
+    "corporate strategy",
+    "business strategy",
+    "strategy and operations",
+    "strategy & operations",
+    "operations analyst",
+    "operations associate",
+    "business operations",
+    "revenue operations",
+    "sales operations",
+    "product operations",
+    "financial analyst",
+    "finance analyst",
+    "strategic finance",
+    "fp&a",
+    "corporate development",
+    "marketing analyst",
+    "growth analyst",
+    "growth associate",
+    "growth marketing",
+    "marketing operations",
+    "product analyst",
+    "product associate",
+    "product manager",
+    "software engineer",
+    "software developer",
+    "frontend engineer",
+    "backend engineer",
+    "full stack engineer",
+    "data scientist",
+    "machine learning engineer",
+    "ml engineer",
+    "ai engineer"
+  ],
+  "family_labels": {
+    "business_analytics": "business analytics",
+    "strategy": "strategy",
+    "operations": "operations",
+    "finance": "finance",
+    "marketing_growth": "marketing and growth",
+    "product": "product",
+    "software_engineering": "software engineering",
+    "data_science_ml": "data and machine learning"
+  }
+}
