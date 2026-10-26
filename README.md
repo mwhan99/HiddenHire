@@ -2,7 +2,7 @@
 
 Discover emerging job opportunities through candidate fit and company hiring momentum.
 
-**[Try HiddenHire Live →](https://hiddenhire-nyc.vercel.app/)**
+**[Try HiddenHire Live →](https://hidden-hire.vercel.app/)**
 
 ![HiddenHire home page: this week's hiring briefing with a market ticker and live cards](hiddenhire-home.png)
 
@@ -131,7 +131,7 @@ HiddenHire is an independently developed MVP and portfolio project. It is active
 
 ## Live Demo
 
-[Try HiddenHire Live](https://hiddenhire-nyc.vercel.app/)
+[Try HiddenHire Live](https://hidden-hire.vercel.app/)
 
 ## Find Roles
 

@@ -9,7 +9,7 @@ startups every week, then ranks openings for a job seeker by
 **Candidate Fit** (how well a role matches them) and **Hiring Momentum**
 (how fast the company is adding roles).
 
-- Live site: https://hiddenhire-nyc.vercel.app (Next.js on Vercel, data in
+- Live site: https://hidden-hire.vercel.app (Next.js on Vercel, data in
   Supabase). This is the link on Meng's résumé and README.
 - Backup: https://hiddenhire.streamlit.app/ (the original Streamlit app). It
   shows a "faster new home" banner and stays up for old links.
@@ -38,7 +38,7 @@ Numbers below were checked against the data on Oct 22, 2026.
 - **Both sites must keep working.** Meng is job hunting; the Vercel link
   is on new applications and the Streamlit link is on older ones.
   - Work on a branch and merge with a pull request. After each merge,
-    check https://hiddenhire-nyc.vercel.app and
+    check https://hidden-hire.vercel.app and
     https://hiddenhire.streamlit.app/ both load.
   - Streamlit Cloud rebuilds from `main` on every push and runs `app.py`,
     `pipeline.py`, the scoring files and `requirements.txt`. Keep changes
@@ -79,7 +79,7 @@ Numbers below were checked against the data on Oct 22, 2026.
 
 | File | What it does |
 |---|---|
-| `web/` | The Next.js app (Next.js 16.4, React 19, Tailwind 4, TypeScript), live at https://hiddenhire-nyc.vercel.app (the Vercel project is named `hidden-hire`). Vercel redeploys on every push to `main`. Run it locally with `npm run dev` inside `web/`, then open http://localhost:3000. Check it with `npm run lint` and `npm run build`. Don't run `npm run build` while `npm run dev` is running: they share `.next/` and the dev server breaks until restarted. |
+| `web/` | The Next.js app (Next.js 16.4, React 19, Tailwind 4, TypeScript), live at https://hidden-hire.vercel.app. Vercel redeploys on every push to `main`. Run it locally with `npm run dev` inside `web/`, then open http://localhost:3000. Check it with `npm run lint` and `npm run build`. Don't run `npm run build` while `npm run dev` is running: they share `.next/` and the dev server breaks until restarted. |
 | Design | Chosen in step 7: the **"Data briefing"** layout. A navy header (`bg-navy`) with a scrolling ticker of this week's changes, a left-aligned headline, then white cards of live data. Cobalt blue `brand` (#2563eb), green `up` for gains, Inter font. Colours are defined in `web/app/globals.css`. It deliberately avoids Parrot's look: no centred hero, floating pill nav, pastel blobs, gradient headline text or floating bubbles. |
 | `web/app/page.tsx` | The home page: navy header, ticker, headline, the open-roles chart, growing-fastest companies, this week's new/closed roles, roles by function, and "How HiddenHire works". |
 | `web/app/companies/` | Company Momentum. `page.tsx` is the leaderboard of every company in the latest snapshot, with a Growing / Steady / Slowing / New filter (`components/CompanyBoard.tsx`, the site's first browser-side "client" component). `[id]/page.tsx` is one page per company (e.g. `/companies/C016`), all prebuilt with `generateStaticParams`. It shows open roles, the week's change, a trend chart with peak and low, roles by function, and the week's new postings (first 10, then a toggle). "Size" always means open roles a week earlier (at least 10), never headcount. |
