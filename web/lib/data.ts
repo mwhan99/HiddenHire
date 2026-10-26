@@ -82,7 +82,53 @@ export async function getLatestMarket(): Promise<{
   return data[0] ?? null;
 }
 
-export type MomentumLabel = "Growing" | "Steady" | "Slowing" | "New to tracking";
+// One company's week-over-week change (market_insights.company_movers).
+export type Mover = {
+  company_id: string;
+  company: string;
+  industry: string | null;
+  previous_open: number;
+  open_now: number;
+  net_change: number;
+  change_pct: number;
+  new_roles: number;
+  closed_roles: number;
+  growth_rate: number;
+};
+
+export type IndustryCount = {
+  industry: string;
+  open_now: number;
+  previous_open: number;
+  net_change: number;
+};
+
+export type Briefing = {
+  snapshot_date: string;
+  headline: Headline;
+  growing: Mover[];
+  slowing: Mover[];
+  functions: FunctionCount[];
+  industries: IndustryCount[];
+  trend: TrendPoint[];
+};
+
+// Everything on the Market Insights page, for the latest snapshot.
+export async function getLatestBriefing(): Promise<Briefing | null> {
+  "use cache";
+  cacheLife("hours");
+
+  const { data, error } = await supabase()
+    .from("market_summary")
+    .select("snapshot_date, headline, growing, slowing, functions, industries, trend")
+    .order("snapshot_date", { ascending: false })
+    .limit(1)
+    .overrideTypes<Briefing[], { merge: false }>();
+  if (error) throw new Error(`Could not load Market Insights: ${error.message}`);
+  return data[0] ?? null;
+}
+
+export type MomentumLabel ="Growing" | "Steady" | "Slowing" | "New to tracking";
 
 export type CompanyMomentum = {
   company_id: string;
