@@ -44,7 +44,7 @@ Numbers below were checked against the data on Oct 22, 2026.
   - Work on a branch and merge with a pull request. After each merge,
     open https://hiddenhire.streamlit.app/ and check it still loads.
 - Run the tests before and after any Python change:
-  `pip install -r requirements-dev.txt` then `pytest` (40 tests today).
+  `pip install -r requirements-dev.txt` then `pytest` (52 tests today).
 - Never edit `HiddenHire_Data.xlsx` by hand in a commit. The weekly
   workflow rewrites it, and a merge conflict on a binary file can't be fixed by hand.
 - The workflow fails on purpose if the **Companies** sheet changes during
