@@ -1180,10 +1180,11 @@ def render_footer():
     )
 
 
-# target="_top": on Streamlit Cloud the app runs inside a frame, and the
-# link should open the new site in the whole window, not inside the frame.
+# Opens in a new tab: on Streamlit Cloud the app runs inside a frame that
+# isn't allowed to change the page around it, so target="_top" (or a
+# same-window link) does nothing there. New tabs are allowed.
 st.markdown(
-    f'<a class="moved-banner" href="{NEW_SITE_URL}" target="_top">'
+    f'<a class="moved-banner" href="{NEW_SITE_URL}" target="_blank" rel="noopener">'
     "<b>HiddenHire has a faster new home.</b> "
     "<span>Same data, updated weekly, with no wait to load. Visit "
     '<span class="nowrap">hidden-hire.vercel.app →</span></span></a>',
