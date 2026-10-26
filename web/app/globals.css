@@ -1,26 +1,47 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* HiddenHire colours. Use them as Tailwind classes: text-ink, bg-navy,
+   bg-brand, text-up, and so on. */
+@theme {
+  --color-ink: #0b1b3a;
+  --color-navy: #0b1b3a;
+  --color-navy-2: #102a5c;
+  --color-brand: #2563eb;
+  --color-up: #059669;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* The site is designed for a light page with a navy header, so it does
+   not switch to dark mode. */
+body {
+  background: #f8fafc;
+  color: var(--color-ink);
+}
+
+/* Ticker: the list is drawn twice, so moving it left by half its width
+   loops seamlessly. */
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.animate-ticker {
+  animation: ticker 60s linear infinite;
+}
+
+.ticker:hover .animate-ticker {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ticker {
+    animation: none;
+  }
 }
