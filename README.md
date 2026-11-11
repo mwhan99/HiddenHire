@@ -150,6 +150,6 @@ HiddenHire is an independently developed MVP and portfolio project. It is active
 
 ## Author
 
-**Meng Han**  
+**Avery Han**  
 M.S. Management and Analytics (Business Analytics), New York University  
 [LinkedIn](https://www.linkedin.com/in/meng-wen-han)
